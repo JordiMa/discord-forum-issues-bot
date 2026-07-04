@@ -9,7 +9,9 @@ const repositoryConfigSchema = z.object({
 });
 
 const forumConfigSchema = z.object({
+  channelId: z.string(),
   repository: z.string(),
+  emoji: z.string().optional(),
   defaultLabels: z.array(z.string()).default([]),
   project: z.string().optional(),
 });
@@ -29,6 +31,7 @@ const appConfigSchema = z.object({
 });
 
 export type AppConfig = z.infer<typeof appConfigSchema>;
+export type RepositoryConfig = z.infer<typeof repositoryConfigSchema>;
 export type ForumConfig = z.infer<typeof forumConfigSchema>;
 export type StatusConfig = z.infer<typeof statusConfigSchema>;
 

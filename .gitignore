@@ -4,6 +4,7 @@ dist/
 .env
 .env.*
 !.env.example
+config.yaml
 *.sqlite
 *.sqlite-journal
 *.db

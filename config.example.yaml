@@ -8,13 +8,17 @@ repositories:
 
 forums:
   bugs:
+    channelId: '000000000000000000' # Discord forum channel ID (right-click > Copy Channel ID)
     repository: mobile
+    emoji: '🐛'
     defaultLabels:
       - bug
       - status:triage
     project: Mobile Development
   suggestions:
+    channelId: '000000000000000000'
     repository: mobile
+    emoji: '💡'
     defaultLabels:
       - enhancement
       - status:triage

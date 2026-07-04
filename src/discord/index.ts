@@ -1,12 +1,13 @@
-import { Client, Events } from 'discord.js';
+import { type AnyThreadChannel, Client, Events } from 'discord.js';
 import { createDiscordClient } from './client.js';
 import { config } from '../config/index.js';
 import { logger } from '../logger.js';
+import type { SyncService } from '../sync/sync.service.js';
 
 export class DiscordModule {
   private readonly client: Client;
 
-  public constructor() {
+  public constructor(private readonly sync: SyncService) {
     this.client = createDiscordClient();
   }
 
@@ -25,11 +26,19 @@ export class DiscordModule {
       logger.info({ tag: readyClient.user.tag }, 'Discord client ready');
     });
 
-    this.client.on(Events.ThreadCreate, (thread) => {
-      logger.info(
-        { threadId: thread.id, name: thread.name },
-        'Forum thread created — TODO: create the matching GitHub issue',
-      );
+    this.client.on(Events.ThreadCreate, (thread, newlyCreated) => {
+      if (!newlyCreated) {
+        return;
+      }
+      void this.handleThreadCreate(thread);
     });
+  }
+
+  private async handleThreadCreate(thread: AnyThreadChannel): Promise<void> {
+    try {
+      await this.sync.onThreadCreated(thread);
+    } catch (error) {
+      logger.error({ error, threadId: thread.id }, 'Failed to process thread creation');
+    }
   }
 }
