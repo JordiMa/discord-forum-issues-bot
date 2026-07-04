@@ -1,9 +1,8 @@
 import { EmbedBuilder } from 'discord.js';
 
-export const VOTES_FIELD_NAME = 'Votes';
-
 export function formatVotes(votes: number): string {
-  return `👍 ${votes}`;
+  const suffix = votes >= 2 ? ' concerné·es' : votes === 1 ? ' concerné·e' : '';
+  return `👍 **${votes}**${suffix}`;
 }
 
 export interface IssueEmbedData {
@@ -23,14 +22,12 @@ export interface IssueEmbedData {
 }
 
 export function buildIssueEmbed(data: IssueEmbedData): EmbedBuilder {
+  const headline = `${data.status.emoji} **${data.status.name}** · ${formatVotes(data.votes)}`;
   const embed = new EmbedBuilder()
     .setColor(data.color)
     .setTitle(`${data.emoji} ${data.title}`)
     .setURL(data.issueUrl)
-    .addFields(
-      { name: 'Statut', value: `${data.status.emoji} ${data.status.name}`, inline: true },
-      { name: VOTES_FIELD_NAME, value: formatVotes(data.votes), inline: true },
-    );
+    .setDescription(headline);
 
   if (data.priority) {
     embed.addFields({ name: 'Priorité', value: data.priority, inline: true });
