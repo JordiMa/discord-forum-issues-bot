@@ -6,6 +6,7 @@ import {
   type MessageActionRowComponentBuilder,
 } from 'discord.js';
 import { logger } from '../logger.js';
+import { VOTES_FIELD_NAME, formatVotes } from './embeds/issue-embed.js';
 
 type ActionRows = ActionRowBuilder<MessageActionRowComponentBuilder>[];
 
@@ -68,7 +69,7 @@ export class DiscordGateway {
 
     const embed = EmbedBuilder.from(existing);
     const fields = (embed.data.fields ?? []).map((field) =>
-      field.name === 'Votes' ? { ...field, value: String(votes) } : field,
+      field.name === VOTES_FIELD_NAME ? { ...field, value: formatVotes(votes) } : field,
     );
     embed.setFields(fields);
 

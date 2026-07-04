@@ -9,21 +9,22 @@ import type { DiscordGateway } from '../gateway.js';
 import { toggleVote } from '../../db/vote.js';
 import { VOTE_CUSTOM_ID } from '../components/issue-actions.js';
 import { prisma } from '../../db/client.js';
+import type { InteractionHandler } from './interaction-handler.js';
 
 const DEFAULT_LEADERBOARD_LIMIT = 10;
 
 export const TOP_BUGS_COMMAND = new SlashCommandBuilder()
   .setName('topbugs')
-  .setDescription('List the most-voted issues')
+  .setDescription('Affiche les demandes les plus votées')
   .addIntegerOption((option) =>
     option
       .setName('limit')
-      .setDescription('How many to show (default 10)')
+      .setDescription('Combien en afficher (10 par défaut)')
       .setMinValue(1)
       .setMaxValue(25),
   );
 
-export class VoteService {
+export class VoteService implements InteractionHandler {
   public constructor(private readonly gateway: DiscordGateway) {}
 
   public async handle(interaction: Interaction): Promise<void> {
@@ -41,7 +42,7 @@ export class VoteService {
 
     const link = await prisma.issueLink.findUnique({ where: { threadId: interaction.channelId } });
     if (!link) {
-      await interaction.editReply({ content: 'This thread is not linked to an issue.' });
+      await interaction.editReply({ content: "Ce fil n'est lié à aucune demande." });
       return;
     }
 
@@ -52,8 +53,8 @@ export class VoteService {
 
     await interaction.editReply({
       content: result.added
-        ? `👍 Marked as affected — **${result.count}** affected user(s).`
-        : `Removed your vote — **${result.count}** affected user(s).`,
+        ? `👍 C'est noté — vous êtes **${result.count}** à être concerné·es.`
+        : `Vote retiré — **${result.count}** concerné·es.`,
     });
   }
 
@@ -66,7 +67,10 @@ export class VoteService {
     });
 
     if (links.length === 0) {
-      await interaction.reply({ content: 'No votes yet.', flags: MessageFlags.Ephemeral });
+      await interaction.reply({
+        content: 'Aucun vote pour le moment.',
+        flags: MessageFlags.Ephemeral,
+      });
       return;
     }
 

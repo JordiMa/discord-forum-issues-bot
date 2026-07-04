@@ -9,6 +9,28 @@ export interface ResolvedStatus {
 
 const PRIORITY_PREFIX = 'priority:';
 
+export const DEFAULT_STATUS_COLOR = 0x5865f2;
+export const CLOSED_STATUS_COLOR = 0x6e7681;
+
+const STATUS_COLORS: Record<string, number> = {
+  'status:triage': 0xf1c40f,
+  'status:confirmed': 0x3498db,
+  'status:planned': 0x9b59b6,
+  'status:in-progress': 0xe67e22,
+  'status:review': 0x1abc9c,
+  'status:testing': 0xe91e63,
+  'status:done': 0x2ecc71,
+  'status:wontfix': 0x95a5a6,
+  'status:duplicate': 0x95a5a6,
+};
+
+const PRIORITY_DISPLAY: Record<string, string> = {
+  critical: '🔴 Critique',
+  high: '🟠 Élevée',
+  medium: '🟡 Moyenne',
+  low: '🟢 Faible',
+};
+
 export function resolveStatusFromLabels(
   labels: string[],
   workflow: AppConfig['workflow'],
@@ -19,11 +41,15 @@ export function resolveStatusFromLabels(
         key,
         label: status.label,
         emoji: status.emoji ?? '⚪',
-        name: labelToStatusName(status.label),
+        name: status.name ?? labelToStatusName(status.label),
       };
     }
   }
   return null;
+}
+
+export function statusColor(label: string | null): number {
+  return (label ? STATUS_COLORS[label] : undefined) ?? DEFAULT_STATUS_COLOR;
 }
 
 export function resolvePriorityFromLabels(labels: string[]): string | undefined {
@@ -31,7 +57,8 @@ export function resolvePriorityFromLabels(labels: string[]): string | undefined 
   if (!label) {
     return undefined;
   }
-  return capitalize(label.slice(PRIORITY_PREFIX.length));
+  const key = label.slice(PRIORITY_PREFIX.length);
+  return PRIORITY_DISPLAY[key] ?? capitalize(key);
 }
 
 export function labelToStatusName(label: string): string {

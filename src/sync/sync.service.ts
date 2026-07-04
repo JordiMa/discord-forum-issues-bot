@@ -17,14 +17,18 @@ import {
   isForumThread,
   resolveAppliedTagNames,
 } from '../discord/forum-thread.js';
-import { resolvePriorityFromLabels, resolveStatusFromLabels } from './status.js';
+import {
+  CLOSED_STATUS_COLOR,
+  DEFAULT_STATUS_COLOR,
+  resolvePriorityFromLabels,
+  resolveStatusFromLabels,
+  statusColor,
+} from './status.js';
 import { findIssueLink } from '../db/issue-link.js';
 import { prisma } from '../db/client.js';
 import { logger } from '../logger.js';
 
 const DEFAULT_FORUM_EMOJI = '🐛';
-const FALLBACK_STATUS = { emoji: '⚪', name: 'Open' };
-const CLOSED_STATUS = { emoji: '🔒', name: 'Closed' };
 
 export enum IssueCreationOutcome {
   Created = 'created',
@@ -236,15 +240,15 @@ export class SyncService {
     createdAt: Date;
     refs?: LinkedRefs;
   }) {
+    const display = this.resolveStatusDisplay(input.labels, input.state);
     return buildIssueEmbed({
       emoji: input.emoji,
       title: input.title,
       issueNumber: input.issue.number,
       issueUrl: input.issue.url,
-      status: this.resolveEmbedStatus(input.labels, input.state),
-      state: input.state,
+      status: { emoji: display.emoji, name: display.name },
+      color: display.color,
       assignees: input.assignees,
-      labels: this.displayLabels(input.labels),
       priority: resolvePriorityFromLabels(input.labels),
       version: input.milestone ?? undefined,
       votes: input.votes,
@@ -292,25 +296,26 @@ export class SyncService {
     return `@${message.author.username}`;
   }
 
-  private resolveEmbedStatus(
+  private resolveStatusDisplay(
     labels: string[],
     state: 'open' | 'closed',
-  ): { emoji: string; name: string } {
+  ): { emoji: string; name: string; color: number } {
     const fromLabels = resolveStatusFromLabels(labels, this.config.workflow);
     if (state === 'closed') {
-      return fromLabels
-        ? { emoji: fromLabels.emoji, name: `${fromLabels.name} · Closed` }
-        : CLOSED_STATUS;
+      return {
+        emoji: fromLabels?.emoji ?? '🔒',
+        name: fromLabels ? `${fromLabels.name} · Fermé` : 'Fermé',
+        color: CLOSED_STATUS_COLOR,
+      };
     }
-    return fromLabels ?? FALLBACK_STATUS;
+    if (fromLabels) {
+      return { emoji: fromLabels.emoji, name: fromLabels.name, color: statusColor(fromLabels.label) };
+    }
+    return { emoji: '⚪', name: 'Ouvert', color: DEFAULT_STATUS_COLOR };
   }
 
   private buildLabels(forum: ForumConfig, thread: AnyThreadChannel): string[] {
     const tagLabels = resolveAppliedTagNames(thread);
     return Array.from(new Set([...forum.defaultLabels, ...tagLabels]));
-  }
-
-  private displayLabels(labels: string[]): string[] {
-    return labels.filter((label) => !label.startsWith('status:') && !label.startsWith('priority:'));
   }
 }

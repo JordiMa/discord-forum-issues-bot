@@ -21,22 +21,22 @@ export function formatDiscordCommentForGitHub(input: {
     return null;
   }
 
-  const lines = [`💬 **${input.author}** _(via Discord)_`, ''];
+  const lines = [`💬 **${input.author}** _(depuis Discord)_`, ''];
   if (content.length > 0) {
     lines.push(content);
   }
   if (input.attachmentUrls.length > 0) {
-    lines.push('', '**Attachments:**', ...input.attachmentUrls);
+    lines.push('', '**Pièces jointes :**', ...input.attachmentUrls);
   }
   return lines.join('\n');
 }
 
 export function formatGitHubCommentForDiscord(event: GitHubCommentEvent): string {
-  const header = `💬 **${event.author}** _(via GitHub)_`;
+  const header = `💬 **${event.author}** _(depuis GitHub)_`;
   const body = event.body.trim();
   const rendered =
     body.length > DISCORD_MESSAGE_LIMIT
-      ? `${body.slice(0, DISCORD_MESSAGE_LIMIT)}…\n\n[Full comment on GitHub](${event.url})`
+      ? `${body.slice(0, DISCORD_MESSAGE_LIMIT)}…\n\n[Voir le commentaire complet sur GitHub](${event.url})`
       : body;
   return `${header}\n\n${rendered}`;
 }

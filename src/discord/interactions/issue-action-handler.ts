@@ -18,8 +18,8 @@ import {
 } from '../components/issue-actions.js';
 import type { InteractionHandler } from './interaction-handler.js';
 
-const DENIED = '⛔ You need moderator permission to do that.';
-const UNAVAILABLE = '⛔ This action is unavailable here.';
+const DENIED = '⛔ Tu dois être modérateur pour faire ça.';
+const UNAVAILABLE = '⛔ Action indisponible ici.';
 
 export class IssueActionHandler implements InteractionHandler {
   public constructor(
@@ -50,7 +50,7 @@ export class IssueActionHandler implements InteractionHandler {
       return;
     }
     await interaction.reply({
-      content: '⚙️ Moderator actions for this issue — pick one below:',
+      content: '⚙️ Actions de modération pour cette demande :',
       components: buildManagePanelRows(this.config),
       flags: MessageFlags.Ephemeral,
     });
@@ -77,7 +77,7 @@ export class IssueActionHandler implements InteractionHandler {
     });
     if (!link) {
       await interaction.reply({
-        content: 'This thread is not linked to a GitHub issue.',
+        content: "Ce fil n'est lié à aucune demande GitHub.",
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -85,7 +85,7 @@ export class IssueActionHandler implements InteractionHandler {
     const repository = await prisma.repository.findUnique({ where: { id: link.repositoryId } });
     if (!repository) {
       await interaction.reply({
-        content: 'Repository mapping not found.',
+        content: 'Dépôt introuvable dans la configuration.',
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -105,7 +105,7 @@ export class IssueActionHandler implements InteractionHandler {
       await interaction.editReply({ content: summary });
     } catch (error) {
       logger.error({ error, action, issue: link.issueNumber }, 'Failed to apply moderator action');
-      await interaction.editReply({ content: '⚠️ Could not apply the change on GitHub.' });
+      await interaction.editReply({ content: "⚠️ Impossible d'appliquer le changement sur GitHub." });
     }
   }
 
@@ -122,28 +122,28 @@ export class IssueActionHandler implements InteractionHandler {
       case 'status': {
         const labels = swapPrefixedLabel(before.labels, 'status:', value);
         await this.issues.setLabels(owner, repo, issueNumber, labels);
-        return `✅ Status → \`${value}\``;
+        return `✅ Statut → \`${value}\``;
       }
       case 'priority': {
         const labels = swapPrefixedLabel(before.labels, 'priority:', value);
         await this.issues.setLabels(owner, repo, issueNumber, labels);
-        return `✅ Priority → \`${value}\``;
+        return `✅ Priorité → \`${value}\``;
       }
       case 'assignee': {
         const assignees = value === NONE_VALUE ? [] : [value];
         await this.issues.setAssignees(owner, repo, issueNumber, assignees);
-        return value === NONE_VALUE ? '✅ Unassigned' : `✅ Assigned → \`${value}\``;
+        return value === NONE_VALUE ? '✅ Assignation retirée' : `✅ Assigné à \`${value}\``;
       }
       case 'version': {
         const milestone = value === NONE_VALUE ? null : value;
         const applied = await this.issues.setMilestone(owner, repo, issueNumber, milestone);
         if (!applied) {
-          return `⚠️ Milestone "${value}" was not found on GitHub. Create it first.`;
+          return `⚠️ Le jalon « ${value} » n'existe pas sur GitHub. Crée-le d'abord.`;
         }
-        return milestone ? `✅ Version → \`${milestone}\`` : '✅ Version cleared';
+        return milestone ? `✅ Version → \`${milestone}\`` : '✅ Version retirée';
       }
       default:
-        return 'Unknown action.';
+        return 'Action inconnue.';
     }
   }
 }

@@ -11,7 +11,7 @@ import type { InteractionHandler } from './interaction-handler.js';
 
 export const CREATE_ISSUE_COMMAND = new SlashCommandBuilder()
   .setName('create-issue')
-  .setDescription('Create the GitHub issue for this forum thread (if it has none yet)');
+  .setDescription("Crée la demande GitHub pour ce fil (s'il n'en a pas encore)");
 
 export class IssueCommandService implements InteractionHandler {
   public constructor(
@@ -29,14 +29,14 @@ export class IssueCommandService implements InteractionHandler {
     }
     if (!interaction.inCachedGuild()) {
       await interaction.reply({
-        content: '⛔ This command is unavailable here.',
+        content: '⛔ Commande indisponible ici.',
         flags: MessageFlags.Ephemeral,
       });
       return;
     }
     if (!isModerator(interaction.member, this.config.moderation)) {
       await interaction.reply({
-        content: '⛔ You need moderator permission to do that.',
+        content: '⛔ Tu dois être modérateur pour faire ça.',
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -46,7 +46,7 @@ export class IssueCommandService implements InteractionHandler {
 
     const thread = await this.gateway.fetchThread(interaction.channelId);
     if (!thread) {
-      await interaction.editReply({ content: 'Run this command inside a forum thread.' });
+      await interaction.editReply({ content: 'Lance cette commande dans un fil de forum.' });
       return;
     }
 
@@ -57,17 +57,17 @@ export class IssueCommandService implements InteractionHandler {
   private describe(result: IssueCreationResult): string {
     switch (result.outcome) {
       case IssueCreationOutcome.Created:
-        return `✅ Created issue **#${result.issueNumber}** — ${result.url}`;
+        return `✅ Demande **#${result.issueNumber}** créée — ${result.url}`;
       case IssueCreationOutcome.AlreadyLinked:
-        return `This thread is already linked to issue #${result.issueNumber}.`;
+        return `Ce fil est déjà lié à la demande #${result.issueNumber}.`;
       case IssueCreationOutcome.ForumNotMapped:
-        return 'This forum is not mapped to a repository in the config.';
+        return "Ce forum n'est associé à aucun dépôt dans la configuration.";
       case IssueCreationOutcome.RepositoryUnknown:
-        return 'The mapped repository is unknown — check the config.';
+        return 'Le dépôt associé est introuvable — vérifie la configuration.';
       case IssueCreationOutcome.NotAForum:
-        return 'This only works inside a forum thread.';
+        return 'Ça ne marche que dans un fil de forum.';
       default:
-        return 'Nothing to do.';
+        return 'Rien à faire.';
     }
   }
 }

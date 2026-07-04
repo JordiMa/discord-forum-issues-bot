@@ -30,10 +30,10 @@ interface SelectOption {
 }
 
 const PRIORITIES: SelectOption[] = [
-  { label: 'Critical', value: 'priority:critical', emoji: '🔴' },
-  { label: 'High', value: 'priority:high', emoji: '🟠' },
-  { label: 'Medium', value: 'priority:medium', emoji: '🟡' },
-  { label: 'Low', value: 'priority:low', emoji: '🟢' },
+  { label: 'Critique', value: 'priority:critical', emoji: '🔴' },
+  { label: 'Élevée', value: 'priority:high', emoji: '🟠' },
+  { label: 'Moyenne', value: 'priority:medium', emoji: '🟡' },
+  { label: 'Faible', value: 'priority:low', emoji: '🟢' },
 ];
 
 // Components on the public embed: a vote button (everyone) and a Manage button
@@ -41,12 +41,12 @@ const PRIORITIES: SelectOption[] = [
 export function buildIssueActionRows(): IssueActionRow[] {
   const vote = new ButtonBuilder()
     .setCustomId(VOTE_CUSTOM_ID)
-    .setLabel('Me too')
+    .setLabel('Moi aussi')
     .setEmoji('👍')
     .setStyle(ButtonStyle.Secondary);
   const manage = new ButtonBuilder()
     .setCustomId(MANAGE_CUSTOM_ID)
-    .setLabel('Manage')
+    .setLabel('Gérer')
     .setEmoji('⚙️')
     .setStyle(ButtonStyle.Secondary);
   return [new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(vote, manage)];
@@ -61,31 +61,31 @@ export function buildManagePanelRows(config: AppConfig): IssueActionRow[] {
     value: status.label,
     emoji: status.emoji,
   }));
-  rows.push(buildSelectRow(ISSUE_ACTION.status, 'Set status', statusOptions));
-  rows.push(buildSelectRow(ISSUE_ACTION.priority, 'Set priority', PRIORITIES));
+  rows.push(buildSelectRow(ISSUE_ACTION.status, 'Changer le statut', statusOptions));
+  rows.push(buildSelectRow(ISSUE_ACTION.priority, 'Définir la priorité', PRIORITIES));
 
   if (config.moderation.assignees.length > 0) {
     const options: SelectOption[] = [
-      { label: 'Unassign', value: NONE_VALUE, emoji: '🚫' },
+      { label: "Retirer l'assignation", value: NONE_VALUE, emoji: '🚫' },
       ...config.moderation.assignees.map((assignee) => ({
         label: assignee.name,
         value: assignee.login,
         emoji: '👤',
       })),
     ];
-    rows.push(buildSelectRow(ISSUE_ACTION.assignee, 'Assign', options));
+    rows.push(buildSelectRow(ISSUE_ACTION.assignee, 'Assigner', options));
   }
 
   if (config.moderation.versions.length > 0) {
     const options: SelectOption[] = [
-      { label: 'No version', value: NONE_VALUE, emoji: '🚫' },
+      { label: 'Aucune version', value: NONE_VALUE, emoji: '🚫' },
       ...config.moderation.versions.map((version) => ({
         label: version,
         value: version,
         emoji: '🔖',
       })),
     ];
-    rows.push(buildSelectRow(ISSUE_ACTION.version, 'Set version', options));
+    rows.push(buildSelectRow(ISSUE_ACTION.version, 'Choisir la version', options));
   }
 
   return rows;

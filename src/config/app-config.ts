@@ -19,6 +19,7 @@ const forumConfigSchema = z.object({
 const statusConfigSchema = z.object({
   label: z.string(),
   emoji: z.string().optional(),
+  name: z.string().optional(),
   projectColumn: z.string().optional(),
 });
 

@@ -7,13 +7,13 @@ export interface IssueBodyInput {
 export function buildIssueBody(input: IssueBodyInput): string {
   const content = input.content.trim();
   return [
-    '> Reported from Discord',
+    '> Signalé depuis Discord',
     '',
-    `**Thread:** ${input.threadUrl}`,
-    `**Reporter:** ${input.reporter}`,
+    `**Fil :** ${input.threadUrl}`,
+    `**Signalé par :** ${input.reporter}`,
     '',
     '---',
     '',
-    content.length > 0 ? content : '_No description provided._',
+    content.length > 0 ? content : '_Aucune description fournie._',
   ].join('\n');
 }
