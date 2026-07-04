@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import { readFileSync } from 'node:fs';
 import { z } from 'zod';
 
 const envSchema = z.object({
@@ -7,7 +8,8 @@ const envSchema = z.object({
   DISCORD_GUILD_ID: z.string().optional(),
 
   GITHUB_APP_ID: z.string().min(1),
-  GITHUB_APP_PRIVATE_KEY: z.string().min(1),
+  GITHUB_APP_PRIVATE_KEY: z.string().optional(),
+  GITHUB_APP_PRIVATE_KEY_FILE: z.string().optional(),
   GITHUB_WEBHOOK_SECRET: z.string().min(1),
   GITHUB_CLIENT_ID: z.string().optional(),
   GITHUB_CLIENT_SECRET: z.string().optional(),
@@ -32,6 +34,19 @@ if (!parsed.success) {
 
 const env = parsed.data;
 
+function resolveGitHubPrivateKey(): string {
+  if (env.GITHUB_APP_PRIVATE_KEY_FILE) {
+    return readFileSync(env.GITHUB_APP_PRIVATE_KEY_FILE, 'utf8');
+  }
+  if (env.GITHUB_APP_PRIVATE_KEY) {
+    return env.GITHUB_APP_PRIVATE_KEY.replace(/\\n/g, '\n');
+  }
+  console.error(
+    'Missing GitHub App private key: set GITHUB_APP_PRIVATE_KEY_FILE (path) or GITHUB_APP_PRIVATE_KEY (inline PEM).',
+  );
+  process.exit(1);
+}
+
 export const config = {
   discord: {
     token: env.DISCORD_TOKEN,
@@ -40,7 +55,7 @@ export const config = {
   },
   github: {
     appId: env.GITHUB_APP_ID,
-    privateKey: env.GITHUB_APP_PRIVATE_KEY.replace(/\\n/g, '\n'),
+    privateKey: resolveGitHubPrivateKey(),
     webhookSecret: env.GITHUB_WEBHOOK_SECRET,
     clientId: env.GITHUB_CLIENT_ID,
     clientSecret: env.GITHUB_CLIENT_SECRET,
