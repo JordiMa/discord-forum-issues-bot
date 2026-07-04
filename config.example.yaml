@@ -13,7 +13,7 @@ forums:
     emoji: '🐛'
     defaultLabels:
       - bug
-      - status:triage
+      - status:new
     project: Mobile Development
   suggestions:
     channelId: '000000000000000000'
@@ -21,14 +21,15 @@ forums:
     emoji: '💡'
     defaultLabels:
       - enhancement
-      - status:triage
+      - status:new
 
 workflow:
   mergedStatus: done # optional: status key applied automatically when a linked PR merges
   statuses:
-    triage:
-      label: status:triage
+    new:
+      label: status:new
       emoji: '🟡'
+      name: 'New'
     confirmed:
       label: status:confirmed
       emoji: '🔵'
