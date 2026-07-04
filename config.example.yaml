@@ -24,7 +24,7 @@ forums:
       - status:new
 
 workflow:
-  mergedStatus: done # optional: status key applied automatically when a linked PR merges
+  mergedStatus: testing # optional: status key applied automatically when a linked PR merges
   statuses:
     new:
       label: status:new
