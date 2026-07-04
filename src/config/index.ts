@@ -16,6 +16,7 @@ const envSchema = z.object({
 
   PORT: z.coerce.number().default(3000),
   WEBHOOK_PATH: z.string().default('/github/webhook'),
+  PUBLIC_URL: z.string().url().optional(),
 
   DATABASE_URL: z.string().min(1),
 
@@ -63,6 +64,7 @@ export const config = {
   server: {
     port: env.PORT,
     webhookPath: env.WEBHOOK_PATH,
+    publicUrl: env.PUBLIC_URL,
   },
   databaseUrl: env.DATABASE_URL,
   nodeEnv: env.NODE_ENV,

@@ -18,6 +18,7 @@ export interface IssueEmbedData {
   votes: number;
   pullRequest?: { number: number; url: string; merged: boolean };
   release?: string;
+  spacerUrl?: string;
   createdAt: Date;
 }
 
@@ -48,6 +49,9 @@ export function buildIssueEmbed(data: IssueEmbedData): EmbedBuilder {
   }
   if (data.release) {
     embed.addFields({ name: 'Disponible dans', value: `✅ ${data.release}`, inline: true });
+  }
+  if (data.spacerUrl) {
+    embed.setImage(data.spacerUrl);
   }
 
   return embed.setFooter({ text: `#${data.issueNumber}` }).setTimestamp(data.createdAt);

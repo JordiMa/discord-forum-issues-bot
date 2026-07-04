@@ -25,10 +25,14 @@ import {
   statusColor,
 } from './status.js';
 import { findIssueLink } from '../db/issue-link.js';
+import { config as env } from '../config/index.js';
 import { prisma } from '../db/client.js';
 import { logger } from '../logger.js';
 
 const DEFAULT_FORUM_EMOJI = '🐛';
+const SPACER_URL = env.server.publicUrl
+  ? `${env.server.publicUrl.replace(/\/$/, '')}/spacer.png`
+  : undefined;
 
 export enum IssueCreationOutcome {
   Created = 'created',
@@ -254,6 +258,7 @@ export class SyncService {
       votes: input.votes,
       pullRequest: input.refs?.pullRequest,
       release: input.refs?.release,
+      spacerUrl: SPACER_URL,
       createdAt: input.createdAt,
     });
   }

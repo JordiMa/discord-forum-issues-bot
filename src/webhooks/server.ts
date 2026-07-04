@@ -5,6 +5,7 @@ import { config } from '../config/index.js';
 import { logger } from '../logger.js';
 import { normalizeComment, normalizeIssue } from '../github/issue-event.js';
 import { normalizePullRequest, normalizeRelease } from '../github/pull-request.js';
+import { SPACER_PNG } from './spacer.js';
 import type { SyncService } from '../sync/sync.service.js';
 import type { LinkedRefsService } from '../sync/linked-refs.service.js';
 import type { CommentMirrorService } from '../comments/comment-mirror.service.js';
@@ -88,6 +89,10 @@ export function createWebhookServer(
 
   server.get('/health', (_req, res) => {
     res.json({ status: 'ok' });
+  });
+
+  server.get('/spacer.png', (_req, res) => {
+    res.type('image/png').set('Cache-Control', 'public, max-age=604800').send(SPACER_PNG);
   });
 
   return server;
