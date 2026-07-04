@@ -22,18 +22,34 @@ const statusConfigSchema = z.object({
   projectColumn: z.string().optional(),
 });
 
+const assigneeConfigSchema = z.object({
+  name: z.string(),
+  login: z.string(),
+});
+
+const moderationConfigSchema = z
+  .object({
+    roleId: z.string().optional(),
+    assignees: z.array(assigneeConfigSchema).default([]),
+    versions: z.array(z.string()).default([]),
+  })
+  .default({});
+
 const appConfigSchema = z.object({
   repositories: z.record(z.string(), repositoryConfigSchema),
   forums: z.record(z.string(), forumConfigSchema),
   workflow: z.object({
     statuses: z.record(z.string(), statusConfigSchema),
   }),
+  moderation: moderationConfigSchema,
 });
 
 export type AppConfig = z.infer<typeof appConfigSchema>;
 export type RepositoryConfig = z.infer<typeof repositoryConfigSchema>;
 export type ForumConfig = z.infer<typeof forumConfigSchema>;
 export type StatusConfig = z.infer<typeof statusConfigSchema>;
+export type ModerationConfig = z.infer<typeof moderationConfigSchema>;
+export type AssigneeConfig = z.infer<typeof assigneeConfigSchema>;
 
 export function loadAppConfig(path: string = config.configPath): AppConfig {
   const raw = readFileSync(path, 'utf8');

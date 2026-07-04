@@ -1,12 +1,14 @@
-import { type AnyThreadChannel, Client, Events } from 'discord.js';
+import { type AnyThreadChannel, Client, Events, type Interaction } from 'discord.js';
 import { config } from '../config/index.js';
 import { logger } from '../logger.js';
 import type { SyncService } from '../sync/sync.service.js';
+import type { IssueActionHandler } from './interactions/issue-action-handler.js';
 
 export class DiscordModule {
   public constructor(
     private readonly client: Client,
     private readonly sync: SyncService,
+    private readonly actions: IssueActionHandler,
   ) {}
 
   public async start(): Promise<Client> {
@@ -30,6 +32,10 @@ export class DiscordModule {
       }
       void this.handleThreadCreate(thread);
     });
+
+    this.client.on(Events.InteractionCreate, (interaction) => {
+      void this.handleInteraction(interaction);
+    });
   }
 
   private async handleThreadCreate(thread: AnyThreadChannel): Promise<void> {
@@ -37,6 +43,14 @@ export class DiscordModule {
       await this.sync.onThreadCreated(thread);
     } catch (error) {
       logger.error({ error, threadId: thread.id }, 'Failed to process thread creation');
+    }
+  }
+
+  private async handleInteraction(interaction: Interaction): Promise<void> {
+    try {
+      await this.actions.handle(interaction);
+    } catch (error) {
+      logger.error({ error }, 'Failed to handle interaction');
     }
   }
 }

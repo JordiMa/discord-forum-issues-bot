@@ -52,3 +52,16 @@ workflow:
     duplicate:
       label: status:duplicate
       emoji: '🔁'
+
+# Moderator actions (select menus on the embed). All optional.
+moderation:
+  # roleId: '000000000000000000'  # restrict actions to this role; otherwise "Manage Threads" is required
+  assignees: # Discord label -> GitHub login (drives the "Assign" menu)
+    - name: Jordi
+      login: jordimarzo
+    - name: Alice
+      login: alice
+  versions: # drives the "Set version" menu; each must exist as a GitHub milestone
+    - '2.5.0'
+    - '2.6.0'
+    - Backlog

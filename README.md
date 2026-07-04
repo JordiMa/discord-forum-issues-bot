@@ -7,9 +7,10 @@ with **GitHub Issues as the single source of truth**.
 - Developers keep working in GitHub — they never touch Discord.
 - Every forum thread maps to exactly **one** GitHub issue, kept in sync **bidirectionally**.
 
-> Status: **early**. Both directions of issue sync work: thread → issue creation
-> (with a persistent status embed) and GitHub → Discord embed updates. Moderator
-> actions (buttons/menus) and comment/PR/release sync are still to come.
+> Status: **early**. Issue sync works both ways (thread → issue creation with a
+> persistent status embed, and GitHub → Discord embed updates), and moderators can
+> drive status / priority / assignee / version from select menus on the embed.
+> Comment mirroring, PRs/releases, and voting are still to come.
 
 ## Architecture
 
@@ -41,6 +42,20 @@ label at a time; changing it in Discord updates GitHub and vice-versa.
    with `defaultLabels` + the applied Discord tag names.
 5. A persistent **status embed** is posted in the thread and the
    thread ⇄ issue link is stored (`IssueLink`) for future edits.
+
+## Moderator actions (no slash commands)
+
+The embed carries **select menus** — Status, Priority, and (when configured)
+Assign and Set version. A moderator picks a value and the bot applies it on
+GitHub, then the embed refreshes:
+
+- **Status / Priority** swap the single `status:*` / `priority:*` label (any
+  previous one is removed — only one may exist at a time).
+- **Assign** sets the GitHub assignee; **Set version** sets the milestone.
+
+Access is gated to `moderation.roleId` if set, otherwise to members with the
+**Manage Threads** permission. Assignees and versions come from the
+`moderation` block in `config.yaml`.
 
 ## Tech stack
 
@@ -119,7 +134,7 @@ the **Message Content** intent (to read the starter message).
 - [x] Persistent status embed in the thread
 - [x] Default labels + Discord tag → label mapping
 - [x] GitHub → Discord embed sync (issue labels / assignees / milestone / state)
-- [ ] Button / select-menu actions (status, assignee, priority, version)
+- [x] Moderator select-menu actions (status, priority, assignee, version)
 - [ ] Comment mirroring · linked PRs & releases
 - [ ] Voting · duplicate detection · GitHub Projects column sync
 

@@ -3,31 +3,19 @@ import { createNodeMiddleware } from '@octokit/webhooks';
 import type { App } from '@octokit/app';
 import { config } from '../config/index.js';
 import { logger } from '../logger.js';
+import { normalizeIssue } from '../github/issue-event.js';
 import type { SyncService } from '../sync/sync.service.js';
 
 export function createWebhookServer(app: App, sync: SyncService): Express {
   const server = express();
 
   app.webhooks.on('issues', async ({ payload }) => {
-    const { issue, repository } = payload;
     try {
-      await sync.onIssueChanged({
-        owner: repository.owner.login,
-        repo: repository.name,
-        number: issue.number,
-        title: issue.title,
-        url: issue.html_url,
-        state: issue.state ?? 'open',
-        labels: (issue.labels ?? [])
-          .map((label) => (typeof label === 'string' ? label : label?.name))
-          .filter((name): name is string => Boolean(name)),
-        assignees: (issue.assignees ?? [])
-          .map((assignee) => assignee?.login)
-          .filter((login): login is string => Boolean(login)),
-        milestone: issue.milestone?.title ?? null,
-      });
+      await sync.onIssueChanged(
+        normalizeIssue(payload.repository.owner.login, payload.repository.name, payload.issue),
+      );
     } catch (error) {
-      logger.error({ error, issue: issue.number }, 'Failed to sync issue event to Discord');
+      logger.error({ error, issue: payload.issue.number }, 'Failed to sync issue event to Discord');
     }
   });
 

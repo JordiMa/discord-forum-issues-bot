@@ -1,5 +1,13 @@
-import { type AnyThreadChannel, type Client, type EmbedBuilder } from 'discord.js';
+import {
+  type ActionRowBuilder,
+  type AnyThreadChannel,
+  type Client,
+  type EmbedBuilder,
+  type StringSelectMenuBuilder,
+} from 'discord.js';
 import { logger } from '../logger.js';
+
+type ActionRows = ActionRowBuilder<StringSelectMenuBuilder>[];
 
 export class DiscordGateway {
   public constructor(private readonly client: Client) {}
@@ -12,9 +20,13 @@ export class DiscordGateway {
     return channel;
   }
 
-  public async sendEmbed(thread: AnyThreadChannel, embed: EmbedBuilder): Promise<string | null> {
+  public async sendEmbed(
+    thread: AnyThreadChannel,
+    embed: EmbedBuilder,
+    components: ActionRows,
+  ): Promise<string | null> {
     try {
-      const message = await thread.send({ embeds: [embed] });
+      const message = await thread.send({ embeds: [embed], components });
       return message.id;
     } catch (error) {
       logger.error({ error, threadId: thread.id }, 'Failed to post embed');
@@ -26,10 +38,11 @@ export class DiscordGateway {
     thread: AnyThreadChannel,
     messageId: string,
     embed: EmbedBuilder,
+    components: ActionRows,
   ): Promise<boolean> {
     try {
       const message = await thread.messages.fetch(messageId);
-      await message.edit({ embeds: [embed] });
+      await message.edit({ embeds: [embed], components });
       return true;
     } catch (error) {
       logger.error({ error, threadId: thread.id, messageId }, 'Failed to edit embed');

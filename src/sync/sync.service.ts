@@ -1,9 +1,16 @@
-import type { AnyThreadChannel, Message } from 'discord.js';
+import type {
+  ActionRowBuilder,
+  AnyThreadChannel,
+  Message,
+  StringSelectMenuBuilder,
+} from 'discord.js';
 import type { AppConfig, ForumConfig } from '../config/app-config.js';
 import type { IssuesService } from '../github/issues.service.js';
+import type { IssueChangedEvent } from '../github/issue-event.js';
 import type { DiscordGateway } from '../discord/gateway.js';
 import { buildIssueBody } from '../github/issue-body.js';
 import { buildIssueEmbed } from '../discord/embeds/issue-embed.js';
+import { buildIssueActionRows } from '../discord/components/issue-actions.js';
 import {
   buildThreadUrl,
   fetchStarterMessageWithRetry,
@@ -18,24 +25,16 @@ const DEFAULT_FORUM_EMOJI = '🐛';
 const FALLBACK_STATUS = { emoji: '⚪', name: 'Open' };
 const CLOSED_STATUS = { emoji: '✅', name: 'Closed' };
 
-export interface IssueChangedEvent {
-  owner: string;
-  repo: string;
-  number: number;
-  title: string;
-  url: string;
-  state: 'open' | 'closed';
-  labels: string[];
-  assignees: string[];
-  milestone: string | null;
-}
-
 export class SyncService {
+  private readonly actionRows: ActionRowBuilder<StringSelectMenuBuilder>[];
+
   public constructor(
     private readonly config: AppConfig,
     private readonly issues: IssuesService,
     private readonly gateway: DiscordGateway,
-  ) {}
+  ) {
+    this.actionRows = buildIssueActionRows(config);
+  }
 
   public async onThreadCreated(thread: AnyThreadChannel): Promise<void> {
     if (!isForumThread(thread)) {
@@ -89,7 +88,7 @@ export class SyncService {
       this.buildEmbed({
         emoji: forum.emoji ?? DEFAULT_FORUM_EMOJI,
         title: thread.name,
-        issue,
+        issue: { number: issue.number, url: issue.url },
         state: 'open',
         labels,
         assignees: [],
@@ -97,6 +96,7 @@ export class SyncService {
         votes: 0,
         createdAt: new Date(),
       }),
+      this.actionRows,
     );
 
     await prisma.issueLink.create({
@@ -144,7 +144,12 @@ export class SyncService {
       createdAt: link.createdAt,
     });
 
-    const updated = await this.gateway.editEmbed(thread, link.embedMessageId, embed);
+    const updated = await this.gateway.editEmbed(
+      thread,
+      link.embedMessageId,
+      embed,
+      this.actionRows,
+    );
     if (updated) {
       logger.info(
         { threadId: thread.id, issue: event.number },
