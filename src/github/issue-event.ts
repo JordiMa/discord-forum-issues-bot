@@ -1,4 +1,5 @@
 export interface IssueChangedEvent {
+  id: number;
   owner: string;
   repo: string;
   number: number;
@@ -11,6 +12,7 @@ export interface IssueChangedEvent {
 }
 
 export interface RawIssue {
+  id: number;
   number: number;
   title: string;
   html_url: string;
@@ -22,6 +24,7 @@ export interface RawIssue {
 
 export function normalizeIssue(owner: string, repo: string, issue: RawIssue): IssueChangedEvent {
   return {
+    id: issue.id,
     owner,
     repo,
     number: issue.number,

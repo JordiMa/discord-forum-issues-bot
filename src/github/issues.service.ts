@@ -52,6 +52,11 @@ export class IssuesService {
     });
   }
 
+  public async getInstallationId(owner: string, repo: string): Promise<number> {
+    const { installationId } = await this.github.getRepoContext(owner, repo);
+    return installationId;
+  }
+
   public async getIssueEvent(
     owner: string,
     repo: string,

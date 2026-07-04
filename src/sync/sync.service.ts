@@ -31,10 +31,12 @@ const SPACER_URL = env.server.publicUrl
 
 export enum IssueCreationOutcome {
   Created = 'created',
+  Linked = 'linked',
   AlreadyLinked = 'already-linked',
   NotAForum = 'not-a-forum',
   ForumNotMapped = 'forum-not-mapped',
   RepositoryUnknown = 'repository-unknown',
+  IssueNotFound = 'issue-not-found',
 }
 
 export interface IssueCreationResult {
@@ -152,6 +154,88 @@ export class SyncService {
       'Created GitHub issue for forum thread',
     );
     return { outcome: IssueCreationOutcome.Created, issueNumber: issue.number, url: issue.url };
+  }
+
+  public async linkExistingIssue(
+    thread: AnyThreadChannel,
+    issueNumber: number,
+  ): Promise<IssueCreationResult> {
+    if (!isForumThread(thread)) {
+      return { outcome: IssueCreationOutcome.NotAForum };
+    }
+    const forum = this.resolveForum(thread.parentId);
+    if (!forum) {
+      return { outcome: IssueCreationOutcome.ForumNotMapped };
+    }
+    const repository = this.config.repositories[forum.repository];
+    if (!repository) {
+      return { outcome: IssueCreationOutcome.RepositoryUnknown };
+    }
+
+    let event: IssueChangedEvent;
+    try {
+      event = await this.issues.getIssueEvent(repository.owner, repository.repo, issueNumber);
+    } catch {
+      return { outcome: IssueCreationOutcome.IssueNotFound, issueNumber };
+    }
+
+    const existingForThread = await prisma.issueLink.findUnique({
+      where: { threadId: thread.id },
+    });
+    if (existingForThread && existingForThread.issueNumber === issueNumber) {
+      return { outcome: IssueCreationOutcome.AlreadyLinked, issueNumber };
+    }
+
+    const installationId = await this.issues.getInstallationId(repository.owner, repository.repo);
+    const savedRepository = await prisma.repository.upsert({
+      where: { owner_repo: { owner: repository.owner, repo: repository.repo } },
+      create: { owner: repository.owner, repo: repository.repo, installationId },
+      update: { installationId },
+    });
+
+    const existingForIssue = await prisma.issueLink.findUnique({
+      where: { repositoryId_issueNumber: { repositoryId: savedRepository.id, issueNumber } },
+    });
+    if (existingForIssue && existingForIssue.threadId !== thread.id) {
+      await this.gateway.deleteMessage(existingForIssue.threadId, existingForIssue.embedMessageId);
+      await prisma.issueLink.delete({ where: { id: existingForIssue.id } });
+    }
+    if (existingForThread) {
+      await this.gateway.deleteMessage(thread.id, existingForThread.embedMessageId);
+      await prisma.issueLink.delete({ where: { id: existingForThread.id } });
+    }
+
+    const embedMessageId = await this.gateway.sendEmbed(
+      thread,
+      this.buildEmbed({
+        emoji: forum.emoji ?? DEFAULT_FORUM_EMOJI,
+        title: event.title,
+        issue: { number: event.number, url: event.url },
+        state: event.state,
+        labels: event.labels,
+        assignees: event.assignees,
+        milestone: event.milestone,
+        votes: 0,
+        createdAt: new Date(),
+      }),
+      buildIssueActionRows(0),
+    );
+
+    await prisma.issueLink.create({
+      data: {
+        threadId: thread.id,
+        issueId: BigInt(event.id),
+        issueNumber,
+        repositoryId: savedRepository.id,
+        embedMessageId,
+      },
+    });
+
+    logger.info(
+      { threadId: thread.id, issue: issueNumber, repository: `${repository.owner}/${repository.repo}` },
+      'Linked existing GitHub issue to thread',
+    );
+    return { outcome: IssueCreationOutcome.Linked, issueNumber, url: event.url };
   }
 
   public async onIssueChanged(event: IssueChangedEvent): Promise<void> {

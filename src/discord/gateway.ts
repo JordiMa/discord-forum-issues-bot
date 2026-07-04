@@ -75,6 +75,17 @@ export class DiscordGateway {
     }
   }
 
+  public async deleteMessage(threadId: string, messageId: string | null): Promise<void> {
+    if (!messageId) {
+      return;
+    }
+    const thread = await this.fetchThread(threadId);
+    if (!thread) {
+      return;
+    }
+    await thread.messages.delete(messageId).catch(() => undefined);
+  }
+
   public async sendThreadMessage(threadId: string, content: string): Promise<void> {
     const thread = await this.fetchThread(threadId);
     if (!thread) {
