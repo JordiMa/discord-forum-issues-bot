@@ -24,7 +24,7 @@ import { logger } from '../logger.js';
 
 const DEFAULT_FORUM_EMOJI = '🐛';
 const FALLBACK_STATUS = { emoji: '⚪', name: 'Open' };
-const CLOSED_STATUS = { emoji: '✅', name: 'Closed' };
+const CLOSED_STATUS = { emoji: '🔒', name: 'Closed' };
 
 export enum IssueCreationOutcome {
   Created = 'created',
@@ -216,6 +216,7 @@ export class SyncService {
       issueNumber: input.issue.number,
       issueUrl: input.issue.url,
       status: this.resolveEmbedStatus(input.labels, input.state),
+      state: input.state,
       assignees: input.assignees,
       labels: this.displayLabels(input.labels),
       priority: resolvePriorityFromLabels(input.labels),
@@ -270,10 +271,12 @@ export class SyncService {
     state: 'open' | 'closed',
   ): { emoji: string; name: string } {
     const fromLabels = resolveStatusFromLabels(labels, this.config.workflow);
-    if (fromLabels) {
-      return fromLabels;
+    if (state === 'closed') {
+      return fromLabels
+        ? { emoji: fromLabels.emoji, name: `${fromLabels.name} · Closed` }
+        : CLOSED_STATUS;
     }
-    return state === 'closed' ? CLOSED_STATUS : FALLBACK_STATUS;
+    return fromLabels ?? FALLBACK_STATUS;
   }
 
   private buildLabels(forum: ForumConfig, thread: AnyThreadChannel): string[] {

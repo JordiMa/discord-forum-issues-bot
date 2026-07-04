@@ -6,6 +6,7 @@ export interface IssueEmbedData {
   issueNumber: number;
   issueUrl: string;
   status: { emoji: string; name: string };
+  state: 'open' | 'closed';
   assignees: string[];
   labels: string[];
   priority?: string;
@@ -30,6 +31,7 @@ const STATUS_COLORS: Record<string, number> = {
 
 const PLACEHOLDER = '—';
 const DEFAULT_COLOR = 0x5865f2;
+const CLOSED_COLOR = 0x6e7681;
 
 export function buildIssueEmbed(data: IssueEmbedData): EmbedBuilder {
   const assigned = data.assignees.length > 0 ? data.assignees.join(', ') : 'Nobody';
@@ -37,7 +39,11 @@ export function buildIssueEmbed(data: IssueEmbedData): EmbedBuilder {
     data.labels.length > 0 ? data.labels.map((label) => `\`${label}\``).join(' ') : PLACEHOLDER;
 
   const embed = new EmbedBuilder()
-    .setColor(STATUS_COLORS[data.status.name.toLowerCase()] ?? DEFAULT_COLOR)
+    .setColor(
+      data.state === 'closed'
+        ? CLOSED_COLOR
+        : (STATUS_COLORS[data.status.name.toLowerCase()] ?? DEFAULT_COLOR),
+    )
     .setTitle(`${data.emoji} ${data.title}`)
     .setURL(data.issueUrl)
     .addFields(
