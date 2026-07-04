@@ -124,6 +124,50 @@ export class IssuesService {
     return true;
   }
 
+  public async closeIssue(
+    owner: string,
+    repo: string,
+    issueNumber: number,
+    stateReason: 'completed' | 'not_planned',
+    labels?: string[],
+  ): Promise<void> {
+    const { client } = await this.github.getRepoContext(owner, repo);
+    await client.request('PATCH /repos/{owner}/{repo}/issues/{issue_number}', {
+      owner,
+      repo,
+      issue_number: issueNumber,
+      state: 'closed',
+      state_reason: stateReason,
+      labels,
+    });
+  }
+
+  public async reopenIssue(owner: string, repo: string, issueNumber: number): Promise<void> {
+    const { client } = await this.github.getRepoContext(owner, repo);
+    await client.request('PATCH /repos/{owner}/{repo}/issues/{issue_number}', {
+      owner,
+      repo,
+      issue_number: issueNumber,
+      state: 'open',
+      state_reason: 'reopened',
+    });
+  }
+
+  public async renameIssue(
+    owner: string,
+    repo: string,
+    issueNumber: number,
+    title: string,
+  ): Promise<void> {
+    const { client } = await this.github.getRepoContext(owner, repo);
+    await client.request('PATCH /repos/{owner}/{repo}/issues/{issue_number}', {
+      owner,
+      repo,
+      issue_number: issueNumber,
+      title,
+    });
+  }
+
   private async resolveMilestoneNumber(
     owner: string,
     repo: string,

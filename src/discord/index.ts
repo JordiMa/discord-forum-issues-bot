@@ -12,6 +12,7 @@ import type { CommentMirrorService } from '../comments/comment-mirror.service.js
 import type { InteractionHandler } from './interactions/interaction-handler.js';
 import { TOP_BUGS_COMMAND } from './interactions/vote.service.js';
 import { CREATE_ISSUE_COMMAND, LINK_ISSUE_COMMAND } from './interactions/issue-command.service.js';
+import { LIFECYCLE_COMMANDS } from './interactions/issue-lifecycle.service.js';
 
 export class DiscordModule {
   public constructor(
@@ -59,6 +60,7 @@ export class DiscordModule {
         TOP_BUGS_COMMAND.toJSON(),
         CREATE_ISSUE_COMMAND.toJSON(),
         LINK_ISSUE_COMMAND.toJSON(),
+        ...LIFECYCLE_COMMANDS.map((command) => command.toJSON()),
       ];
       if (config.discord.guildId) {
         await readyClient.application.commands.set(commands, config.discord.guildId);
