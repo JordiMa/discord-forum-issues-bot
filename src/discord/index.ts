@@ -1,15 +1,13 @@
 import { type AnyThreadChannel, Client, Events } from 'discord.js';
-import { createDiscordClient } from './client.js';
 import { config } from '../config/index.js';
 import { logger } from '../logger.js';
 import type { SyncService } from '../sync/sync.service.js';
 
 export class DiscordModule {
-  private readonly client: Client;
-
-  public constructor(private readonly sync: SyncService) {
-    this.client = createDiscordClient();
-  }
+  public constructor(
+    private readonly client: Client,
+    private readonly sync: SyncService,
+  ) {}
 
   public async start(): Promise<Client> {
     this.registerEventHandlers();

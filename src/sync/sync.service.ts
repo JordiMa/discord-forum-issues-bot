@@ -1,6 +1,7 @@
 import type { AnyThreadChannel, Message } from 'discord.js';
 import type { AppConfig, ForumConfig } from '../config/app-config.js';
-import type { IssuesService, CreatedIssue } from '../github/issues.service.js';
+import type { IssuesService } from '../github/issues.service.js';
+import type { DiscordGateway } from '../discord/gateway.js';
 import { buildIssueBody } from '../github/issue-body.js';
 import { buildIssueEmbed } from '../discord/embeds/issue-embed.js';
 import {
@@ -9,17 +10,31 @@ import {
   isForumThread,
   resolveAppliedTagNames,
 } from '../discord/forum-thread.js';
-import { resolveStatusFromLabels } from './status.js';
+import { resolvePriorityFromLabels, resolveStatusFromLabels } from './status.js';
 import { prisma } from '../db/client.js';
 import { logger } from '../logger.js';
 
 const DEFAULT_FORUM_EMOJI = '🐛';
 const FALLBACK_STATUS = { emoji: '⚪', name: 'Open' };
+const CLOSED_STATUS = { emoji: '✅', name: 'Closed' };
+
+export interface IssueChangedEvent {
+  owner: string;
+  repo: string;
+  number: number;
+  title: string;
+  url: string;
+  state: 'open' | 'closed';
+  labels: string[];
+  assignees: string[];
+  milestone: string | null;
+}
 
 export class SyncService {
   public constructor(
     private readonly config: AppConfig,
     private readonly issues: IssuesService,
+    private readonly gateway: DiscordGateway,
   ) {}
 
   public async onThreadCreated(thread: AnyThreadChannel): Promise<void> {
@@ -69,11 +84,19 @@ export class SyncService {
       update: { installationId: issue.installationId },
     });
 
-    const embedMessageId = await this.postIssueEmbed(
+    const embedMessageId = await this.gateway.sendEmbed(
       thread,
-      forum.emoji ?? DEFAULT_FORUM_EMOJI,
-      issue,
-      labels,
+      this.buildEmbed({
+        emoji: forum.emoji ?? DEFAULT_FORUM_EMOJI,
+        title: thread.name,
+        issue,
+        state: 'open',
+        labels,
+        assignees: [],
+        milestone: null,
+        votes: 0,
+        createdAt: new Date(),
+      }),
     );
 
     await prisma.issueLink.create({
@@ -96,6 +119,66 @@ export class SyncService {
     );
   }
 
+  public async onIssueChanged(event: IssueChangedEvent): Promise<void> {
+    const link = await this.findIssueLink(event.owner, event.repo, event.number);
+    if (!link || !link.embedMessageId) {
+      return;
+    }
+
+    const thread = await this.gateway.fetchThread(link.threadId);
+    if (!thread) {
+      logger.warn({ threadId: link.threadId, issue: event.number }, 'Linked thread not found');
+      return;
+    }
+
+    const forum = this.resolveForum(thread.parentId);
+    const embed = this.buildEmbed({
+      emoji: forum?.emoji ?? DEFAULT_FORUM_EMOJI,
+      title: event.title,
+      issue: { number: event.number, url: event.url },
+      state: event.state,
+      labels: event.labels,
+      assignees: event.assignees,
+      milestone: event.milestone,
+      votes: link.votes,
+      createdAt: link.createdAt,
+    });
+
+    const updated = await this.gateway.editEmbed(thread, link.embedMessageId, embed);
+    if (updated) {
+      logger.info(
+        { threadId: thread.id, issue: event.number },
+        'Updated Discord embed from GitHub issue event',
+      );
+    }
+  }
+
+  private buildEmbed(input: {
+    emoji: string;
+    title: string;
+    issue: { number: number; url: string };
+    state: 'open' | 'closed';
+    labels: string[];
+    assignees: string[];
+    milestone: string | null;
+    votes: number;
+    createdAt: Date;
+  }) {
+    return buildIssueEmbed({
+      emoji: input.emoji,
+      title: input.title,
+      issueNumber: input.issue.number,
+      issueUrl: input.issue.url,
+      status: this.resolveEmbedStatus(input.labels, input.state),
+      assignees: input.assignees,
+      labels: this.displayLabels(input.labels),
+      priority: resolvePriorityFromLabels(input.labels),
+      version: input.milestone ?? undefined,
+      votes: input.votes,
+      createdAt: input.createdAt,
+    });
+  }
+
   private resolveForum(parentId: string | null): ForumConfig | null {
     if (!parentId) {
       return null;
@@ -115,36 +198,35 @@ export class SyncService {
     return `@${message.author.username}`;
   }
 
+  private resolveEmbedStatus(
+    labels: string[],
+    state: 'open' | 'closed',
+  ): { emoji: string; name: string } {
+    const fromLabels = resolveStatusFromLabels(labels, this.config.workflow);
+    if (fromLabels) {
+      return fromLabels;
+    }
+    return state === 'closed' ? CLOSED_STATUS : FALLBACK_STATUS;
+  }
+
   private buildLabels(forum: ForumConfig, thread: AnyThreadChannel): string[] {
     const tagLabels = resolveAppliedTagNames(thread);
     return Array.from(new Set([...forum.defaultLabels, ...tagLabels]));
   }
 
-  private async postIssueEmbed(
-    thread: AnyThreadChannel,
-    emoji: string,
-    issue: CreatedIssue,
-    labels: string[],
-  ): Promise<string | null> {
-    const status = resolveStatusFromLabels(labels, this.config.workflow);
-    const embed = buildIssueEmbed({
-      emoji,
-      title: thread.name,
-      issueNumber: issue.number,
-      issueUrl: issue.url,
-      status: status ?? FALLBACK_STATUS,
-      assignees: [],
-      labels: labels.filter((label) => !label.startsWith('status:')),
-      votes: 0,
-      createdAt: new Date(),
-    });
+  private displayLabels(labels: string[]): string[] {
+    return labels.filter((label) => !label.startsWith('status:') && !label.startsWith('priority:'));
+  }
 
-    try {
-      const message = await thread.send({ embeds: [embed] });
-      return message.id;
-    } catch (error) {
-      logger.error({ error, threadId: thread.id }, 'Failed to post issue status embed');
+  private async findIssueLink(owner: string, repo: string, issueNumber: number) {
+    const repository = await prisma.repository.findUnique({
+      where: { owner_repo: { owner, repo } },
+    });
+    if (!repository) {
       return null;
     }
+    return prisma.issueLink.findUnique({
+      where: { repositoryId_issueNumber: { repositoryId: repository.id, issueNumber } },
+    });
   }
 }

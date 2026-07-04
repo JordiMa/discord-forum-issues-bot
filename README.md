@@ -7,9 +7,9 @@ with **GitHub Issues as the single source of truth**.
 - Developers keep working in GitHub — they never touch Discord.
 - Every forum thread maps to exactly **one** GitHub issue, kept in sync **bidirectionally**.
 
-> Status: **early**. Thread → issue creation with a persistent status embed is
-> implemented; the reverse GitHub → Discord sync and moderator actions are stubbed
-> (see `// TODO` markers and the roadmap).
+> Status: **early**. Both directions of issue sync work: thread → issue creation
+> (with a persistent status embed) and GitHub → Discord embed updates. Moderator
+> actions (buttons/menus) and comment/PR/release sync are still to come.
 
 ## Architecture
 
@@ -118,7 +118,7 @@ the **Message Content** intent (to read the starter message).
 - [x] Thread → GitHub issue creation
 - [x] Persistent status embed in the thread
 - [x] Default labels + Discord tag → label mapping
-- [ ] GitHub → Discord sync (webhook server currently logs only)
+- [x] GitHub → Discord embed sync (issue labels / assignees / milestone / state)
 - [ ] Button / select-menu actions (status, assignee, priority, version)
 - [ ] Comment mirroring · linked PRs & releases
 - [ ] Voting · duplicate detection · GitHub Projects column sync

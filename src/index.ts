@@ -2,6 +2,8 @@ import { config } from './config/index.js';
 import { loadAppConfig } from './config/app-config.js';
 import { logger } from './logger.js';
 import { prisma } from './db/client.js';
+import { createDiscordClient } from './discord/client.js';
+import { DiscordGateway } from './discord/gateway.js';
 import { DiscordModule } from './discord/index.js';
 import { GitHubModule } from './github/index.js';
 import { IssuesService } from './github/issues.service.js';
@@ -15,12 +17,14 @@ async function bootstrap(): Promise<void> {
 
   await prisma.$connect();
 
+  const client = createDiscordClient();
+  const gateway = new DiscordGateway(client);
   const github = new GitHubModule();
   const issues = new IssuesService(github);
-  const sync = new SyncService(appConfig, issues);
-  const discord = new DiscordModule(sync);
+  const sync = new SyncService(appConfig, issues, gateway);
+  const discord = new DiscordModule(client, sync);
 
-  const server = createWebhookServer(github.getApp());
+  const server = createWebhookServer(github.getApp(), sync);
   server.listen(config.server.port, () => {
     logger.info(
       { port: config.server.port, path: config.server.webhookPath },
