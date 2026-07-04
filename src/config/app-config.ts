@@ -47,6 +47,7 @@ const appConfigSchema = z.object({
   forums: z.record(z.string(), forumConfigSchema),
   workflow: z.object({
     statuses: z.record(z.string(), statusConfigSchema),
+    mergedStatus: z.string().optional(),
   }),
   moderation: moderationConfigSchema,
   comments: commentsConfigSchema,

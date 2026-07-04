@@ -50,6 +50,10 @@ model IssueLink {
   issueNumber    Int
   embedMessageId String?
   votes          Int      @default(0)
+  linkedPrNumber Int?
+  linkedPrUrl    String?
+  linkedPrMerged Boolean  @default(false)
+  releaseTag     String?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 

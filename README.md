@@ -10,7 +10,8 @@ with **GitHub Issues as the single source of truth**.
 > Status: **early**. Issue sync works both ways (thread → issue creation with a
 > persistent status embed, and GitHub → Discord embed updates), and moderators can
 > drive status / priority / assignee / version from select menus on the embed.
-> Comments mirror both ways too. PRs/releases and voting are still to come.
+> Comments mirror both ways, and linked PRs and releases surface on the embed
+> (with auto status on merge). Voting and duplicate detection are still to come.
 
 ## Architecture
 
@@ -69,6 +70,15 @@ messages, and skips GitHub comments created by its own App. The thread's starter
 message is never mirrored (it is already the issue body). Configure via the
 `comments` block — `discordToGithub` (`everyone` / `maintainers` / `disabled`)
 and `githubToDiscord` (`all` / `disabled`).
+
+## Linked PRs & releases
+
+When a pull request closes an issue (`Fixes #184`, `Closes #184`, `Resolves
+#184`), the embed gains a **Pull Request** field. On merge it shows **Merged**,
+and if `workflow.mergedStatus` is set the issue's status label is swapped to it
+automatically. When a release's notes reference the issue or its fixing PR, the
+embed shows **Released in vX**. (Auto-locking the thread some days after a
+release is not implemented yet.)
 
 ## Tech stack
 
@@ -149,8 +159,9 @@ the **Message Content** intent (to read the starter message).
 - [x] GitHub → Discord embed sync (issue labels / assignees / milestone / state)
 - [x] Moderator select-menu actions (status, priority, assignee, version)
 - [x] Comment mirroring (Discord replies ↔ GitHub comments)
-- [ ] Linked PRs & releases
+- [x] Linked PRs (`Fixes #N` → PR field + auto status on merge) & release tags
 - [ ] Voting · duplicate detection · GitHub Projects column sync
+- [ ] Auto-lock threads N days after release
 
 ## License
 

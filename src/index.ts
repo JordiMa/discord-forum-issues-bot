@@ -10,6 +10,7 @@ import { CommentMirrorService } from './comments/comment-mirror.service.js';
 import { GitHubModule } from './github/index.js';
 import { IssuesService } from './github/issues.service.js';
 import { SyncService } from './sync/sync.service.js';
+import { LinkedRefsService } from './sync/linked-refs.service.js';
 import { createWebhookServer } from './webhooks/server.js';
 
 async function bootstrap(): Promise<void> {
@@ -26,9 +27,10 @@ async function bootstrap(): Promise<void> {
   const sync = new SyncService(appConfig, issues, gateway);
   const actions = new IssueActionHandler(appConfig, issues, sync);
   const comments = new CommentMirrorService(appConfig, issues, gateway);
+  const linkedRefs = new LinkedRefsService(appConfig, issues, sync);
   const discord = new DiscordModule(client, sync, actions, comments);
 
-  const server = createWebhookServer(github.getApp(), sync, comments);
+  const server = createWebhookServer(github.getApp(), sync, comments, linkedRefs);
   server.listen(config.server.port, () => {
     logger.info(
       { port: config.server.port, path: config.server.webhookPath },

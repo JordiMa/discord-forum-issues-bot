@@ -24,6 +24,7 @@ forums:
       - status:triage
 
 workflow:
+  mergedStatus: done # optional: status key applied automatically when a linked PR merges
   statuses:
     triage:
       label: status:triage

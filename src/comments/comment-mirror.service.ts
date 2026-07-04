@@ -5,6 +5,7 @@ import type { IssuesService } from '../github/issues.service.js';
 import type { GitHubCommentEvent } from '../github/issue-event.js';
 import type { DiscordGateway } from '../discord/gateway.js';
 import { isModerator } from '../discord/permissions.js';
+import { findIssueLink } from '../db/issue-link.js';
 import { prisma } from '../db/client.js';
 import { logger } from '../logger.js';
 
@@ -105,20 +106,7 @@ export class CommentMirrorService {
       return;
     }
 
-    const repository = await prisma.repository.findUnique({
-      where: { owner_repo: { owner: event.owner, repo: event.repo } },
-    });
-    if (!repository) {
-      return;
-    }
-    const link = await prisma.issueLink.findUnique({
-      where: {
-        repositoryId_issueNumber: {
-          repositoryId: repository.id,
-          issueNumber: event.issueNumber,
-        },
-      },
-    });
+    const link = await findIssueLink(event.owner, event.repo, event.issueNumber);
     if (!link) {
       return;
     }

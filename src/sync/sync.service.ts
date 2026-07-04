@@ -18,12 +18,18 @@ import {
   resolveAppliedTagNames,
 } from '../discord/forum-thread.js';
 import { resolvePriorityFromLabels, resolveStatusFromLabels } from './status.js';
+import { findIssueLink } from '../db/issue-link.js';
 import { prisma } from '../db/client.js';
 import { logger } from '../logger.js';
 
 const DEFAULT_FORUM_EMOJI = '🐛';
 const FALLBACK_STATUS = { emoji: '⚪', name: 'Open' };
 const CLOSED_STATUS = { emoji: '✅', name: 'Closed' };
+
+interface LinkedRefs {
+  pullRequest?: { number: number; url: string; merged: boolean };
+  release?: string;
+}
 
 export class SyncService {
   private readonly actionRows: ActionRowBuilder<StringSelectMenuBuilder>[];
@@ -120,7 +126,7 @@ export class SyncService {
   }
 
   public async onIssueChanged(event: IssueChangedEvent): Promise<void> {
-    const link = await this.findIssueLink(event.owner, event.repo, event.number);
+    const link = await findIssueLink(event.owner, event.repo, event.number);
     if (!link || !link.embedMessageId) {
       return;
     }
@@ -142,6 +148,7 @@ export class SyncService {
       milestone: event.milestone,
       votes: link.votes,
       createdAt: link.createdAt,
+      refs: this.resolveLinkedRefs(link),
     });
 
     const updated = await this.gateway.editEmbed(
@@ -158,6 +165,11 @@ export class SyncService {
     }
   }
 
+  public async refreshIssue(owner: string, repo: string, issueNumber: number): Promise<void> {
+    const event = await this.issues.getIssueEvent(owner, repo, issueNumber);
+    await this.onIssueChanged(event);
+  }
+
   private buildEmbed(input: {
     emoji: string;
     title: string;
@@ -168,6 +180,7 @@ export class SyncService {
     milestone: string | null;
     votes: number;
     createdAt: Date;
+    refs?: LinkedRefs;
   }) {
     return buildIssueEmbed({
       emoji: input.emoji,
@@ -180,8 +193,25 @@ export class SyncService {
       priority: resolvePriorityFromLabels(input.labels),
       version: input.milestone ?? undefined,
       votes: input.votes,
+      pullRequest: input.refs?.pullRequest,
+      release: input.refs?.release,
       createdAt: input.createdAt,
     });
+  }
+
+  private resolveLinkedRefs(link: {
+    linkedPrNumber: number | null;
+    linkedPrUrl: string | null;
+    linkedPrMerged: boolean;
+    releaseTag: string | null;
+  }): LinkedRefs {
+    return {
+      pullRequest:
+        link.linkedPrNumber !== null
+          ? { number: link.linkedPrNumber, url: link.linkedPrUrl ?? '', merged: link.linkedPrMerged }
+          : undefined,
+      release: link.releaseTag ?? undefined,
+    };
   }
 
   private resolveForum(parentId: string | null): ForumConfig | null {
@@ -221,17 +251,5 @@ export class SyncService {
 
   private displayLabels(labels: string[]): string[] {
     return labels.filter((label) => !label.startsWith('status:') && !label.startsWith('priority:'));
-  }
-
-  private async findIssueLink(owner: string, repo: string, issueNumber: number) {
-    const repository = await prisma.repository.findUnique({
-      where: { owner_repo: { owner, repo } },
-    });
-    if (!repository) {
-      return null;
-    }
-    return prisma.issueLink.findUnique({
-      where: { repositoryId_issueNumber: { repositoryId: repository.id, issueNumber } },
-    });
   }
 }

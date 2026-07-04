@@ -11,6 +11,8 @@ export interface IssueEmbedData {
   priority?: string;
   version?: string;
   votes: number;
+  pullRequest?: { number: number; url: string; merged: boolean };
+  release?: string;
   createdAt: Date;
 }
 
@@ -34,7 +36,7 @@ export function buildIssueEmbed(data: IssueEmbedData): EmbedBuilder {
   const labels =
     data.labels.length > 0 ? data.labels.map((label) => `\`${label}\``).join(' ') : PLACEHOLDER;
 
-  return new EmbedBuilder()
+  const embed = new EmbedBuilder()
     .setColor(STATUS_COLORS[data.status.name.toLowerCase()] ?? DEFAULT_COLOR)
     .setTitle(`${data.emoji} ${data.title}`)
     .setURL(data.issueUrl)
@@ -46,7 +48,19 @@ export function buildIssueEmbed(data: IssueEmbedData): EmbedBuilder {
       { name: 'Version', value: data.version ?? PLACEHOLDER, inline: true },
       { name: 'Votes', value: String(data.votes), inline: true },
       { name: 'GitHub', value: `[#${data.issueNumber}](${data.issueUrl})`, inline: true },
-    )
-    .setFooter({ text: `#${data.issueNumber}` })
-    .setTimestamp(data.createdAt);
+    );
+
+  if (data.pullRequest) {
+    const merged = data.pullRequest.merged ? ' · **Merged**' : '';
+    embed.addFields({
+      name: 'Pull Request',
+      value: `[#${data.pullRequest.number}](${data.pullRequest.url})${merged}`,
+      inline: true,
+    });
+  }
+  if (data.release) {
+    embed.addFields({ name: 'Released in', value: `\`${data.release}\``, inline: true });
+  }
+
+  return embed.setFooter({ text: `#${data.issueNumber}` }).setTimestamp(data.createdAt);
 }
