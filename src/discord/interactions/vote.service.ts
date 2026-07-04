@@ -47,14 +47,9 @@ export class VoteService implements InteractionHandler {
     }
 
     const result = await toggleVote(link.id, interaction.user.id);
-    if (link.embedMessageId) {
-      await this.gateway.updateEmbedVotes(link.threadId, link.embedMessageId, result.count);
-    }
 
     await interaction.editReply({
-      content: result.added
-        ? `👍 C'est noté — vous êtes **${result.count}** à être concerné·es.`
-        : `Vote retiré — **${result.count}** concerné·es.`,
+      content: result.added ? "👍 C'est noté, merci !" : 'Vote retiré.',
     });
   }
 

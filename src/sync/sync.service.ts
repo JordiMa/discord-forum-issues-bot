@@ -257,7 +257,6 @@ export class SyncService {
       assignees: input.assignees,
       priority: resolvePriorityFromLabels(input.labels),
       version: input.milestone ?? undefined,
-      votes: input.votes,
       pullRequest: input.refs?.pullRequest,
       release: input.refs?.release,
       spacerUrl: SPACER_URL,

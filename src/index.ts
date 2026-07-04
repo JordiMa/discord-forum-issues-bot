@@ -20,6 +20,15 @@ async function bootstrap(): Promise<void> {
 
   const appConfig = loadAppConfig();
 
+  logger.info(
+    {
+      spacer: config.server.publicUrl
+        ? `${config.server.publicUrl.replace(/\/$/, '')}/spacer.png`
+        : 'disabled — set PUBLIC_URL for full-width embeds',
+    },
+    'Embed width spacer',
+  );
+
   await prisma.$connect();
 
   const client = createDiscordClient();

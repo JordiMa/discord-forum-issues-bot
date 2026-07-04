@@ -6,7 +6,6 @@ import {
   type MessageActionRowComponentBuilder,
 } from 'discord.js';
 import { logger } from '../logger.js';
-import { formatVotes } from './embeds/issue-embed.js';
 
 type ActionRows = ActionRowBuilder<MessageActionRowComponentBuilder>[];
 
@@ -54,28 +53,6 @@ export class DiscordGateway {
       await thread.messages.delete(oldMessageId).catch(() => undefined);
     }
     return newMessageId;
-  }
-
-  public async updateEmbedVotes(threadId: string, messageId: string, votes: number): Promise<void> {
-    const thread = await this.fetchThread(threadId);
-    if (!thread) {
-      return;
-    }
-    const message = await thread.messages.fetch(messageId).catch(() => null);
-    const existing = message?.embeds[0];
-    if (!message || !existing) {
-      return;
-    }
-
-    const embed = EmbedBuilder.from(existing);
-    const description = embed.data.description ?? '';
-    embed.setDescription(description.replace(/👍[^\n]*/u, formatVotes(votes)));
-
-    try {
-      await message.edit({ embeds: [embed] });
-    } catch (error) {
-      logger.error({ error, threadId, messageId }, 'Failed to update vote count');
-    }
   }
 
   public async sendThreadMessage(threadId: string, content: string): Promise<void> {

@@ -1,10 +1,5 @@
 import { EmbedBuilder } from 'discord.js';
 
-export function formatVotes(votes: number): string {
-  const suffix = votes >= 2 ? ' concerné·es' : votes === 1 ? ' concerné·e' : '';
-  return `👍 **${votes}**${suffix}`;
-}
-
 export interface IssueEmbedData {
   emoji: string;
   title: string;
@@ -16,7 +11,6 @@ export interface IssueEmbedData {
   assignees: string[];
   priority?: string;
   version?: string;
-  votes: number;
   pullRequest?: { number: number; url: string; merged: boolean };
   release?: string;
   spacerUrl?: string;
@@ -24,7 +18,7 @@ export interface IssueEmbedData {
 }
 
 export function buildIssueEmbed(data: IssueEmbedData): EmbedBuilder {
-  const headline = `${data.status.emoji} **${data.status.name}** · ${formatVotes(data.votes)}`;
+  const headline = `${data.status.emoji} **${data.status.name}**`;
   const embed = new EmbedBuilder()
     .setColor(data.color)
     .setTitle(`${data.emoji} ${data.title}`)
