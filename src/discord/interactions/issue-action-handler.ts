@@ -1,12 +1,25 @@
-import { MessageFlags, type Interaction } from 'discord.js';
+import {
+  MessageFlags,
+  type ButtonInteraction,
+  type Interaction,
+  type StringSelectMenuInteraction,
+} from 'discord.js';
 import type { AppConfig } from '../../config/app-config.js';
 import type { IssuesService } from '../../github/issues.service.js';
 import { prisma } from '../../db/client.js';
 import { logger } from '../../logger.js';
 import { swapPrefixedLabel } from '../../sync/labels.js';
 import { isModerator } from '../permissions.js';
-import { ISSUE_ACTION, NONE_VALUE } from '../components/issue-actions.js';
+import {
+  buildManagePanelRows,
+  ISSUE_ACTION,
+  MANAGE_CUSTOM_ID,
+  NONE_VALUE,
+} from '../components/issue-actions.js';
 import type { InteractionHandler } from './interaction-handler.js';
+
+const DENIED = '⛔ You need moderator permission to do that.';
+const UNAVAILABLE = '⛔ This action is unavailable here.';
 
 export class IssueActionHandler implements InteractionHandler {
   public constructor(
@@ -15,24 +28,41 @@ export class IssueActionHandler implements InteractionHandler {
   ) {}
 
   public async handle(interaction: Interaction): Promise<void> {
-    if (!interaction.isStringSelectMenu()) {
+    if (interaction.isButton() && interaction.customId === MANAGE_CUSTOM_ID) {
+      await this.handleManage(interaction);
       return;
     }
-    if (!interaction.customId.startsWith(`${ISSUE_ACTION.prefix}:`)) {
-      return;
+    if (
+      interaction.isStringSelectMenu() &&
+      interaction.customId.startsWith(`${ISSUE_ACTION.prefix}:`)
+    ) {
+      await this.handleSelect(interaction);
     }
+  }
+
+  private async handleManage(interaction: ButtonInteraction): Promise<void> {
     if (!interaction.inCachedGuild()) {
-      await interaction.reply({
-        content: '⛔ This action is unavailable here.',
-        flags: MessageFlags.Ephemeral,
-      });
+      await interaction.reply({ content: UNAVAILABLE, flags: MessageFlags.Ephemeral });
       return;
     }
     if (!isModerator(interaction.member, this.config.moderation)) {
-      await interaction.reply({
-        content: '⛔ You need moderator permission to do that.',
-        flags: MessageFlags.Ephemeral,
-      });
+      await interaction.reply({ content: DENIED, flags: MessageFlags.Ephemeral });
+      return;
+    }
+    await interaction.reply({
+      content: '⚙️ Moderator actions for this issue — pick one below:',
+      components: buildManagePanelRows(this.config),
+      flags: MessageFlags.Ephemeral,
+    });
+  }
+
+  private async handleSelect(interaction: StringSelectMenuInteraction): Promise<void> {
+    if (!interaction.inCachedGuild()) {
+      await interaction.reply({ content: UNAVAILABLE, flags: MessageFlags.Ephemeral });
+      return;
+    }
+    if (!isModerator(interaction.member, this.config.moderation)) {
+      await interaction.reply({ content: DENIED, flags: MessageFlags.Ephemeral });
       return;
     }
 

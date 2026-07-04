@@ -18,6 +18,7 @@ export const ISSUE_ACTION = {
 } as const;
 
 export const VOTE_CUSTOM_ID = 'issue-vote';
+export const MANAGE_CUSTOM_ID = 'issue-manage';
 export const NONE_VALUE = '__none__';
 
 type IssueActionRow = ActionRowBuilder<MessageActionRowComponentBuilder>;
@@ -35,8 +36,25 @@ const PRIORITIES: SelectOption[] = [
   { label: 'Low', value: 'priority:low', emoji: '🟢' },
 ];
 
-export function buildIssueActionRows(config: AppConfig): IssueActionRow[] {
-  const rows: IssueActionRow[] = [buildVoteRow()];
+// Components on the public embed: a vote button (everyone) and a Manage button
+// (opens a moderator-only ephemeral panel). Everyone sees only these two.
+export function buildIssueActionRows(): IssueActionRow[] {
+  const vote = new ButtonBuilder()
+    .setCustomId(VOTE_CUSTOM_ID)
+    .setLabel('Me too')
+    .setEmoji('👍')
+    .setStyle(ButtonStyle.Secondary);
+  const manage = new ButtonBuilder()
+    .setCustomId(MANAGE_CUSTOM_ID)
+    .setLabel('Manage')
+    .setEmoji('⚙️')
+    .setStyle(ButtonStyle.Secondary);
+  return [new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(vote, manage)];
+}
+
+// The moderator control panel, shown ephemerally behind the Manage button.
+export function buildManagePanelRows(config: AppConfig): IssueActionRow[] {
+  const rows: IssueActionRow[] = [];
 
   const statusOptions: SelectOption[] = Object.values(config.workflow.statuses).map((status) => ({
     label: labelToStatusName(status.label),
@@ -71,15 +89,6 @@ export function buildIssueActionRows(config: AppConfig): IssueActionRow[] {
   }
 
   return rows;
-}
-
-function buildVoteRow(): IssueActionRow {
-  const button = new ButtonBuilder()
-    .setCustomId(VOTE_CUSTOM_ID)
-    .setLabel('Me too')
-    .setEmoji('👍')
-    .setStyle(ButtonStyle.Secondary);
-  return new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(button);
 }
 
 function buildSelectRow(customId: string, placeholder: string, options: SelectOption[]): IssueActionRow {

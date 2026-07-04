@@ -54,7 +54,7 @@ export class SyncService {
     private readonly issues: IssuesService,
     private readonly gateway: DiscordGateway,
   ) {
-    this.actionRows = buildIssueActionRows(config);
+    this.actionRows = buildIssueActionRows();
   }
 
   public async onThreadCreated(thread: AnyThreadChannel): Promise<void> {
