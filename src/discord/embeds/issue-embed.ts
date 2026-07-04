@@ -18,16 +18,20 @@ export interface IssueEmbedData {
 }
 
 export function buildIssueEmbed(data: IssueEmbedData): EmbedBuilder {
-  const headline = `${data.status.emoji} **${data.status.name}**`;
   const embed = new EmbedBuilder()
     .setColor(data.color)
-    .setTitle(`${data.emoji} ${data.title}`)
-    .setURL(data.issueUrl)
-    .setDescription(headline);
+    .setTitle(data.type ? data.title : `${data.emoji} ${data.title}`)
+    .setURL(data.issueUrl);
 
   if (data.type) {
     embed.setAuthor({ name: `${data.type.emoji} ${data.type.name}` });
   }
+
+  embed.addFields({
+    name: 'Statut',
+    value: `${data.status.emoji} ${data.status.name}`,
+    inline: true,
+  });
 
   if (data.priority) {
     embed.addFields({ name: 'Priorité', value: data.priority, inline: true });
