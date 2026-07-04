@@ -3,10 +3,15 @@ import { createNodeMiddleware } from '@octokit/webhooks';
 import type { App } from '@octokit/app';
 import { config } from '../config/index.js';
 import { logger } from '../logger.js';
-import { normalizeIssue } from '../github/issue-event.js';
+import { normalizeComment, normalizeIssue } from '../github/issue-event.js';
 import type { SyncService } from '../sync/sync.service.js';
+import type { CommentMirrorService } from '../comments/comment-mirror.service.js';
 
-export function createWebhookServer(app: App, sync: SyncService): Express {
+export function createWebhookServer(
+  app: App,
+  sync: SyncService,
+  comments: CommentMirrorService,
+): Express {
   const server = express();
 
   app.webhooks.on('issues', async ({ payload }) => {
@@ -16,6 +21,24 @@ export function createWebhookServer(app: App, sync: SyncService): Express {
       );
     } catch (error) {
       logger.error({ error, issue: payload.issue.number }, 'Failed to sync issue event to Discord');
+    }
+  });
+
+  app.webhooks.on('issue_comment', async ({ payload }) => {
+    if (payload.action !== 'created') {
+      return;
+    }
+    try {
+      await comments.onGitHubComment(
+        normalizeComment(
+          payload.repository.owner.login,
+          payload.repository.name,
+          payload.issue.number,
+          payload.comment,
+        ),
+      );
+    } catch (error) {
+      logger.error({ error, issue: payload.issue.number }, 'Failed to mirror GitHub comment');
     }
   });
 

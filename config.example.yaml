@@ -65,3 +65,8 @@ moderation:
     - '2.5.0'
     - '2.6.0'
     - Backlog
+
+# Comment mirroring between Discord thread replies and GitHub issue comments.
+comments:
+  discordToGithub: everyone # everyone | maintainers | disabled
+  githubToDiscord: all # all | disabled

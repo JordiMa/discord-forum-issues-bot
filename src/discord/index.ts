@@ -1,7 +1,14 @@
-import { type AnyThreadChannel, Client, Events, type Interaction } from 'discord.js';
+import {
+  type AnyThreadChannel,
+  Client,
+  Events,
+  type Interaction,
+  type Message,
+} from 'discord.js';
 import { config } from '../config/index.js';
 import { logger } from '../logger.js';
 import type { SyncService } from '../sync/sync.service.js';
+import type { CommentMirrorService } from '../comments/comment-mirror.service.js';
 import type { IssueActionHandler } from './interactions/issue-action-handler.js';
 
 export class DiscordModule {
@@ -9,6 +16,7 @@ export class DiscordModule {
     private readonly client: Client,
     private readonly sync: SyncService,
     private readonly actions: IssueActionHandler,
+    private readonly comments: CommentMirrorService,
   ) {}
 
   public async start(): Promise<Client> {
@@ -36,6 +44,10 @@ export class DiscordModule {
     this.client.on(Events.InteractionCreate, (interaction) => {
       void this.handleInteraction(interaction);
     });
+
+    this.client.on(Events.MessageCreate, (message) => {
+      void this.handleMessageCreate(message);
+    });
   }
 
   private async handleThreadCreate(thread: AnyThreadChannel): Promise<void> {
@@ -51,6 +63,14 @@ export class DiscordModule {
       await this.actions.handle(interaction);
     } catch (error) {
       logger.error({ error }, 'Failed to handle interaction');
+    }
+  }
+
+  private async handleMessageCreate(message: Message): Promise<void> {
+    try {
+      await this.comments.onDiscordMessage(message);
+    } catch (error) {
+      logger.error({ error, messageId: message.id }, 'Failed to mirror Discord message');
     }
   }
 }

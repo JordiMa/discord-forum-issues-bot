@@ -37,3 +37,37 @@ export function normalizeIssue(owner: string, repo: string, issue: RawIssue): Is
     milestone: issue.milestone?.title ?? null,
   };
 }
+
+export interface GitHubCommentEvent {
+  owner: string;
+  repo: string;
+  issueNumber: number;
+  author: string;
+  body: string;
+  url: string;
+  viaAppId: number | null;
+}
+
+export interface RawComment {
+  body?: string | null;
+  html_url: string;
+  user?: { login?: string | null } | null;
+  performed_via_github_app?: { id?: number | null } | null;
+}
+
+export function normalizeComment(
+  owner: string,
+  repo: string,
+  issueNumber: number,
+  comment: RawComment,
+): GitHubCommentEvent {
+  return {
+    owner,
+    repo,
+    issueNumber,
+    author: comment.user?.login ?? 'unknown',
+    body: comment.body ?? '',
+    url: comment.html_url,
+    viaAppId: comment.performed_via_github_app?.id ?? null,
+  };
+}

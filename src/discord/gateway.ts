@@ -49,4 +49,17 @@ export class DiscordGateway {
       return false;
     }
   }
+
+  public async sendThreadMessage(threadId: string, content: string): Promise<void> {
+    const thread = await this.fetchThread(threadId);
+    if (!thread) {
+      logger.warn({ threadId }, 'Cannot mirror comment: thread not found');
+      return;
+    }
+    try {
+      await thread.send({ content, allowedMentions: { parse: [] } });
+    } catch (error) {
+      logger.error({ error, threadId }, 'Failed to mirror comment into Discord');
+    }
+  }
 }

@@ -35,6 +35,13 @@ const moderationConfigSchema = z
   })
   .default({});
 
+const commentsConfigSchema = z
+  .object({
+    discordToGithub: z.enum(['everyone', 'maintainers', 'disabled']).default('everyone'),
+    githubToDiscord: z.enum(['all', 'disabled']).default('all'),
+  })
+  .default({});
+
 const appConfigSchema = z.object({
   repositories: z.record(z.string(), repositoryConfigSchema),
   forums: z.record(z.string(), forumConfigSchema),
@@ -42,6 +49,7 @@ const appConfigSchema = z.object({
     statuses: z.record(z.string(), statusConfigSchema),
   }),
   moderation: moderationConfigSchema,
+  comments: commentsConfigSchema,
 });
 
 export type AppConfig = z.infer<typeof appConfigSchema>;
@@ -50,6 +58,7 @@ export type ForumConfig = z.infer<typeof forumConfigSchema>;
 export type StatusConfig = z.infer<typeof statusConfigSchema>;
 export type ModerationConfig = z.infer<typeof moderationConfigSchema>;
 export type AssigneeConfig = z.infer<typeof assigneeConfigSchema>;
+export type CommentsConfig = z.infer<typeof commentsConfigSchema>;
 
 export function loadAppConfig(path: string = config.configPath): AppConfig {
   const raw = readFileSync(path, 'utf8');

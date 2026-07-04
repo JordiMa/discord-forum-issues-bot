@@ -1,6 +1,5 @@
 import {
   MessageFlags,
-  PermissionFlagsBits,
   type Interaction,
   type StringSelectMenuInteraction,
 } from 'discord.js';
@@ -10,6 +9,7 @@ import type { SyncService } from '../../sync/sync.service.js';
 import { prisma } from '../../db/client.js';
 import { logger } from '../../logger.js';
 import { swapPrefixedLabel } from '../../sync/labels.js';
+import { isModerator } from '../permissions.js';
 import { ISSUE_ACTION, NONE_VALUE } from '../components/issue-actions.js';
 
 export class IssueActionHandler {
@@ -33,7 +33,7 @@ export class IssueActionHandler {
       });
       return;
     }
-    if (!this.isModerator(interaction)) {
+    if (!isModerator(interaction.member, this.config.moderation)) {
       await interaction.reply({
         content: '⛔ You need moderator permission to do that.',
         flags: MessageFlags.Ephemeral,
@@ -133,13 +133,5 @@ export class IssueActionHandler {
       default:
         return;
     }
-  }
-
-  private isModerator(interaction: StringSelectMenuInteraction<'cached'>): boolean {
-    const roleId = this.config.moderation.roleId;
-    if (roleId) {
-      return interaction.member.roles.cache.has(roleId);
-    }
-    return interaction.member.permissions.has(PermissionFlagsBits.ManageThreads);
   }
 }

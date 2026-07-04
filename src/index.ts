@@ -6,6 +6,7 @@ import { createDiscordClient } from './discord/client.js';
 import { DiscordGateway } from './discord/gateway.js';
 import { DiscordModule } from './discord/index.js';
 import { IssueActionHandler } from './discord/interactions/issue-action-handler.js';
+import { CommentMirrorService } from './comments/comment-mirror.service.js';
 import { GitHubModule } from './github/index.js';
 import { IssuesService } from './github/issues.service.js';
 import { SyncService } from './sync/sync.service.js';
@@ -24,9 +25,10 @@ async function bootstrap(): Promise<void> {
   const issues = new IssuesService(github);
   const sync = new SyncService(appConfig, issues, gateway);
   const actions = new IssueActionHandler(appConfig, issues, sync);
-  const discord = new DiscordModule(client, sync, actions);
+  const comments = new CommentMirrorService(appConfig, issues, gateway);
+  const discord = new DiscordModule(client, sync, actions, comments);
 
-  const server = createWebhookServer(github.getApp(), sync);
+  const server = createWebhookServer(github.getApp(), sync, comments);
   server.listen(config.server.port, () => {
     logger.info(
       { port: config.server.port, path: config.server.webhookPath },

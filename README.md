@@ -10,7 +10,7 @@ with **GitHub Issues as the single source of truth**.
 > Status: **early**. Issue sync works both ways (thread → issue creation with a
 > persistent status embed, and GitHub → Discord embed updates), and moderators can
 > drive status / priority / assignee / version from select menus on the embed.
-> Comment mirroring, PRs/releases, and voting are still to come.
+> Comments mirror both ways too. PRs/releases and voting are still to come.
 
 ## Architecture
 
@@ -56,6 +56,19 @@ GitHub, then the embed refreshes:
 Access is gated to `moderation.roleId` if set, otherwise to members with the
 **Manage Threads** permission. Assignees and versions come from the
 `moderation` block in `config.yaml`.
+
+## Comment mirroring
+
+Thread replies and GitHub issue comments mirror each other:
+
+- A reply in the thread becomes a GitHub issue comment (`💬 name _(via Discord)_`).
+- A GitHub comment becomes a thread message (`💬 login _(via GitHub)_`).
+
+Echo loops are broken by author identity: the bot ignores its own Discord
+messages, and skips GitHub comments created by its own App. The thread's starter
+message is never mirrored (it is already the issue body). Configure via the
+`comments` block — `discordToGithub` (`everyone` / `maintainers` / `disabled`)
+and `githubToDiscord` (`all` / `disabled`).
 
 ## Tech stack
 
@@ -135,7 +148,8 @@ the **Message Content** intent (to read the starter message).
 - [x] Default labels + Discord tag → label mapping
 - [x] GitHub → Discord embed sync (issue labels / assignees / milestone / state)
 - [x] Moderator select-menu actions (status, priority, assignee, version)
-- [ ] Comment mirroring · linked PRs & releases
+- [x] Comment mirroring (Discord replies ↔ GitHub comments)
+- [ ] Linked PRs & releases
 - [ ] Voting · duplicate detection · GitHub Projects column sync
 
 ## License

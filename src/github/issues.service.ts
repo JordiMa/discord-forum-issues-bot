@@ -37,6 +37,21 @@ export class IssuesService {
     };
   }
 
+  public async createComment(
+    owner: string,
+    repo: string,
+    issueNumber: number,
+    body: string,
+  ): Promise<void> {
+    const { client } = await this.github.getRepoContext(owner, repo);
+    await client.request('POST /repos/{owner}/{repo}/issues/{issue_number}/comments', {
+      owner,
+      repo,
+      issue_number: issueNumber,
+      body,
+    });
+  }
+
   public async getIssueEvent(
     owner: string,
     repo: string,
