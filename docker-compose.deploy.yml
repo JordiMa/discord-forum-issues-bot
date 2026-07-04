@@ -1,8 +1,8 @@
-# Local build & run. For NAS / server deployment (pull a prebuilt image),
-# use docker-compose.deploy.yml instead.
+# Deployment (NAS / server): pull the image built by CI instead of building.
+# Set BOT_IMAGE in .env, e.g. BOT_IMAGE=ghcr.io/<owner>/discord-forum-issues-bot:latest
 services:
   bot:
-    build: .
+    image: ${BOT_IMAGE:-ghcr.io/OWNER/discord-forum-issues-bot:latest}
     restart: unless-stopped
     env_file: .env
     ports:

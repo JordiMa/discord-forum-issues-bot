@@ -1,7 +1,8 @@
 // SQLite by default. To use PostgreSQL, set provider = "postgresql"
 // and point DATABASE_URL at your Postgres instance.
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-3.0.x", "linux-arm64-openssl-3.0.x"]
 }
 
 datasource db {

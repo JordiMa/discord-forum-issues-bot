@@ -139,6 +139,9 @@ npm run build && npm start
 docker compose up --build
 ```
 
+For NAS / self-hosted deployment (CI-built image + compose, migrations run on
+start), see [DEPLOY.md](DEPLOY.md).
+
 ## Configuration
 
 - **`.env`** — secrets and runtime settings (see `.env.example`).
