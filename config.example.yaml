@@ -55,6 +55,13 @@ workflow:
       label: status:duplicate
       emoji: '🔁'
 
+# Type / category of the ticket: a "Type" menu in Manage + a badge at the top
+# of the embed. Optional, and no type is set by default.
+types:
+  bug: { label: 'type:bug', emoji: '🐛', name: 'Bug' }
+  suggestion: { label: 'type:suggestion', emoji: '💡', name: 'Suggestion' }
+  question: { label: 'type:question', emoji: '❓', name: 'Question' }
+
 # Moderator actions (select menus on the embed). All optional.
 moderation:
   # roleId: '000000000000000000'  # restrict actions to this role; otherwise "Manage Threads" is required
