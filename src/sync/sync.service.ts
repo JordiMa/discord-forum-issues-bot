@@ -22,6 +22,7 @@ import {
   DEFAULT_STATUS_COLOR,
   resolvePriorityFromLabels,
   resolveStatusFromLabels,
+  resolveTypeFromLabels,
 } from './status.js';
 import { findIssueLink } from '../db/issue-link.js';
 import { config as env } from '../config/index.js';
@@ -244,6 +245,7 @@ export class SyncService {
     refs?: LinkedRefs;
   }) {
     const display = this.resolveStatusDisplay(input.labels, input.state);
+    const issueType = resolveTypeFromLabels(input.labels, this.config.types);
     return buildIssueEmbed({
       emoji: input.emoji,
       title: input.title,
@@ -251,6 +253,7 @@ export class SyncService {
       issueUrl: input.issue.url,
       status: { emoji: display.emoji, name: display.name },
       color: display.color,
+      type: issueType ?? undefined,
       assignees: input.assignees,
       priority: resolvePriorityFromLabels(input.labels),
       version: input.milestone ?? undefined,

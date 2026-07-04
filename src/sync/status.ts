@@ -67,6 +67,23 @@ export function resolvePriorityFromLabels(labels: string[]): string | undefined 
   return PRIORITY_DISPLAY[key] ?? capitalize(key);
 }
 
+export interface ResolvedType {
+  emoji: string;
+  name: string;
+}
+
+export function resolveTypeFromLabels(
+  labels: string[],
+  types: AppConfig['types'],
+): ResolvedType | null {
+  for (const [key, type] of Object.entries(types)) {
+    if (labels.includes(type.label)) {
+      return { emoji: type.emoji ?? '🏷️', name: type.name ?? key };
+    }
+  }
+  return null;
+}
+
 export function labelToStatusName(label: string): string {
   return label
     .replace(/^status:/, '')

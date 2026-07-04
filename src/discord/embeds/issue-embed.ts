@@ -12,6 +12,7 @@ export interface IssueEmbedData {
   issueUrl: string;
   status: { emoji: string; name: string };
   color: number;
+  type?: { emoji: string; name: string };
   assignees: string[];
   priority?: string;
   version?: string;
@@ -29,6 +30,10 @@ export function buildIssueEmbed(data: IssueEmbedData): EmbedBuilder {
     .setTitle(`${data.emoji} ${data.title}`)
     .setURL(data.issueUrl)
     .setDescription(headline);
+
+  if (data.type) {
+    embed.setAuthor({ name: `${data.type.emoji} ${data.type.name}` });
+  }
 
   if (data.priority) {
     embed.addFields({ name: 'Priorité', value: data.priority, inline: true });

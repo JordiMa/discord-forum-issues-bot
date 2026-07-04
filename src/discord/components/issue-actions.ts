@@ -11,6 +11,7 @@ import { labelToStatusName } from '../../sync/status.js';
 
 export const ISSUE_ACTION = {
   prefix: 'issue-action',
+  type: 'issue-action:type',
   status: 'issue-action:status',
   priority: 'issue-action:priority',
   assignee: 'issue-action:assignee',
@@ -55,6 +56,19 @@ export function buildIssueActionRows(): IssueActionRow[] {
 // The moderator control panel, shown ephemerally behind the Manage button.
 export function buildManagePanelRows(config: AppConfig): IssueActionRow[] {
   const rows: IssueActionRow[] = [];
+
+  const types = Object.values(config.types);
+  if (types.length > 0) {
+    const options: SelectOption[] = [
+      { label: 'Aucun', value: NONE_VALUE, emoji: '🚫' },
+      ...types.map((type) => ({
+        label: type.name ?? type.label,
+        value: type.label,
+        emoji: type.emoji,
+      })),
+    ];
+    rows.push(buildSelectRow(ISSUE_ACTION.type, 'Définir le type', options));
+  }
 
   const statusOptions: SelectOption[] = Object.values(config.workflow.statuses).map((status) => ({
     label: labelToStatusName(status.label),

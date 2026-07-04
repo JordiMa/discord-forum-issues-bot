@@ -24,6 +24,12 @@ const statusConfigSchema = z.object({
   projectColumn: z.string().optional(),
 });
 
+const typeConfigSchema = z.object({
+  label: z.string(),
+  emoji: z.string().optional(),
+  name: z.string().optional(),
+});
+
 const assigneeConfigSchema = z.object({
   name: z.string(),
   login: z.string(),
@@ -51,6 +57,7 @@ const appConfigSchema = z.object({
     statuses: z.record(z.string(), statusConfigSchema),
     mergedStatus: z.string().optional(),
   }),
+  types: z.record(z.string(), typeConfigSchema).default({}),
   moderation: moderationConfigSchema,
   comments: commentsConfigSchema,
 });
@@ -59,6 +66,7 @@ export type AppConfig = z.infer<typeof appConfigSchema>;
 export type RepositoryConfig = z.infer<typeof repositoryConfigSchema>;
 export type ForumConfig = z.infer<typeof forumConfigSchema>;
 export type StatusConfig = z.infer<typeof statusConfigSchema>;
+export type TypeConfig = z.infer<typeof typeConfigSchema>;
 export type ModerationConfig = z.infer<typeof moderationConfigSchema>;
 export type AssigneeConfig = z.infer<typeof assigneeConfigSchema>;
 export type CommentsConfig = z.infer<typeof commentsConfigSchema>;

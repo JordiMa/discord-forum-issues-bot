@@ -119,6 +119,14 @@ export class IssueActionHandler implements InteractionHandler {
     const before = await this.issues.getIssueEvent(owner, repo, issueNumber);
 
     switch (action) {
+      case 'type': {
+        const labels =
+          value === NONE_VALUE
+            ? before.labels.filter((label) => !label.startsWith('type:'))
+            : swapPrefixedLabel(before.labels, 'type:', value);
+        await this.issues.setLabels(owner, repo, issueNumber, labels);
+        return value === NONE_VALUE ? '✅ Type retiré' : `✅ Type → \`${value}\``;
+      }
       case 'status': {
         const labels = swapPrefixedLabel(before.labels, 'status:', value);
         await this.issues.setLabels(owner, repo, issueNumber, labels);
