@@ -7,11 +7,11 @@ the SQLite database is created and migrated automatically on the mounted volume.
 ## 1. Push to GitHub (triggers the image build)
 
 ```bash
-git remote add origin git@github.com:<owner>/discord-forum-issues-bot.git
+git remote add origin git@github.com:JordiMa/discord-forum-issues-bot.git
 git push -u origin main
 ```
 
-`.github/workflows/docker.yml` builds and pushes `ghcr.io/<owner>/discord-forum-issues-bot`
+`.github/workflows/docker.yml` builds and pushes `ghcr.io/jordima/discord-forum-issues-bot`
 on every push to `main` (tags `latest` + short SHA) and on `v*` tags. Watch it in
 the repo's **Actions** tab.
 
@@ -19,7 +19,7 @@ By default the GHCR package is **private**. Either make it public
 (Package → Settings → Change visibility) or, on the NAS, log in first:
 
 ```bash
-echo <GH_PAT_with_read:packages> | docker login ghcr.io -u <owner> --password-stdin
+echo <GH_PAT_with_read:packages> | docker login ghcr.io -u JordiMa --password-stdin
 ```
 
 ## 2. Create the GitHub App

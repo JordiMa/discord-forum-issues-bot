@@ -2,7 +2,7 @@
 # Set BOT_IMAGE in .env, e.g. BOT_IMAGE=ghcr.io/<owner>/discord-forum-issues-bot:latest
 services:
   bot:
-    image: ${BOT_IMAGE:-ghcr.io/OWNER/discord-forum-issues-bot:latest}
+    image: ${BOT_IMAGE:-ghcr.io/jordima/discord-forum-issues-bot:latest}
     restart: unless-stopped
     env_file: .env
     ports:
