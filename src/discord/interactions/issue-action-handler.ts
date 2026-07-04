@@ -1,22 +1,17 @@
-import {
-  MessageFlags,
-  type Interaction,
-  type StringSelectMenuInteraction,
-} from 'discord.js';
+import { MessageFlags, type Interaction } from 'discord.js';
 import type { AppConfig } from '../../config/app-config.js';
 import type { IssuesService } from '../../github/issues.service.js';
-import type { SyncService } from '../../sync/sync.service.js';
 import { prisma } from '../../db/client.js';
 import { logger } from '../../logger.js';
 import { swapPrefixedLabel } from '../../sync/labels.js';
 import { isModerator } from '../permissions.js';
 import { ISSUE_ACTION, NONE_VALUE } from '../components/issue-actions.js';
+import type { InteractionHandler } from './interaction-handler.js';
 
-export class IssueActionHandler {
+export class IssueActionHandler implements InteractionHandler {
   public constructor(
     private readonly config: AppConfig,
     private readonly issues: IssuesService,
-    private readonly sync: SyncService,
   ) {}
 
   public async handle(interaction: Interaction): Promise<void> {
@@ -66,72 +61,59 @@ export class IssueActionHandler {
       return;
     }
 
-    await interaction.deferUpdate();
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
     const action = interaction.customId.slice(`${ISSUE_ACTION.prefix}:`.length);
     try {
-      await this.applyAction({
+      const summary = await this.applyAction(
         action,
         value,
-        owner: repository.owner,
-        repo: repository.repo,
-        issueNumber: link.issueNumber,
-        interaction,
-      });
+        repository.owner,
+        repository.repo,
+        link.issueNumber,
+      );
+      await interaction.editReply({ content: summary });
     } catch (error) {
       logger.error({ error, action, issue: link.issueNumber }, 'Failed to apply moderator action');
-      await interaction.followUp({
-        content: '⚠️ Could not apply the change on GitHub.',
-        flags: MessageFlags.Ephemeral,
-      });
+      await interaction.editReply({ content: '⚠️ Could not apply the change on GitHub.' });
     }
   }
 
-  private async applyAction(input: {
-    action: string;
-    value: string;
-    owner: string;
-    repo: string;
-    issueNumber: number;
-    interaction: StringSelectMenuInteraction<'cached'>;
-  }): Promise<void> {
-    const { action, value, owner, repo, issueNumber, interaction } = input;
+  private async applyAction(
+    action: string,
+    value: string,
+    owner: string,
+    repo: string,
+    issueNumber: number,
+  ): Promise<string> {
     const before = await this.issues.getIssueEvent(owner, repo, issueNumber);
 
     switch (action) {
       case 'status': {
         const labels = swapPrefixedLabel(before.labels, 'status:', value);
         await this.issues.setLabels(owner, repo, issueNumber, labels);
-        await this.sync.onIssueChanged({ ...before, labels });
-        return;
+        return `✅ Status → \`${value}\``;
       }
       case 'priority': {
         const labels = swapPrefixedLabel(before.labels, 'priority:', value);
         await this.issues.setLabels(owner, repo, issueNumber, labels);
-        await this.sync.onIssueChanged({ ...before, labels });
-        return;
+        return `✅ Priority → \`${value}\``;
       }
       case 'assignee': {
         const assignees = value === NONE_VALUE ? [] : [value];
         await this.issues.setAssignees(owner, repo, issueNumber, assignees);
-        await this.sync.onIssueChanged({ ...before, assignees });
-        return;
+        return value === NONE_VALUE ? '✅ Unassigned' : `✅ Assigned → \`${value}\``;
       }
       case 'version': {
         const milestone = value === NONE_VALUE ? null : value;
         const applied = await this.issues.setMilestone(owner, repo, issueNumber, milestone);
         if (!applied) {
-          await interaction.followUp({
-            content: `⚠️ Milestone "${value}" was not found on GitHub. Create it first.`,
-            flags: MessageFlags.Ephemeral,
-          });
-          return;
+          return `⚠️ Milestone "${value}" was not found on GitHub. Create it first.`;
         }
-        await this.sync.onIssueChanged({ ...before, milestone });
-        return;
+        return milestone ? `✅ Version → \`${milestone}\`` : '✅ Version cleared';
       }
       default:
-        return;
+        return 'Unknown action.';
     }
   }
 }

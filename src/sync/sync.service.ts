@@ -47,6 +47,7 @@ interface LinkedRefs {
 
 export class SyncService {
   private readonly actionRows: ActionRowBuilder<MessageActionRowComponentBuilder>[];
+  private readonly threadLocks = new Map<string, Promise<unknown>>();
 
   public constructor(
     private readonly config: AppConfig,
@@ -166,36 +167,61 @@ export class SyncService {
     }
 
     const forum = this.resolveForum(thread.parentId);
-    const embed = this.buildEmbed({
-      emoji: forum?.emoji ?? DEFAULT_FORUM_EMOJI,
-      title: event.title,
-      issue: { number: event.number, url: event.url },
-      state: event.state,
-      labels: event.labels,
-      assignees: event.assignees,
-      milestone: event.milestone,
-      votes: link.votes,
-      createdAt: link.createdAt,
-      refs: this.resolveLinkedRefs(link),
-    });
 
-    const updated = await this.gateway.editEmbed(
-      thread,
-      link.embedMessageId,
-      embed,
-      this.actionRows,
-    );
-    if (updated) {
-      logger.info(
-        { threadId: thread.id, issue: event.number },
-        'Updated Discord embed from GitHub issue event',
+    await this.withThreadLock(link.threadId, async () => {
+      const current = await prisma.issueLink.findUnique({ where: { id: link.id } });
+      if (!current) {
+        return;
+      }
+
+      const embed = this.buildEmbed({
+        emoji: forum?.emoji ?? DEFAULT_FORUM_EMOJI,
+        title: event.title,
+        issue: { number: event.number, url: event.url },
+        state: event.state,
+        labels: event.labels,
+        assignees: event.assignees,
+        milestone: event.milestone,
+        votes: current.votes,
+        createdAt: current.createdAt,
+        refs: this.resolveLinkedRefs(current),
+      });
+
+      const newMessageId = await this.gateway.repostEmbed(
+        thread,
+        current.embedMessageId,
+        embed,
+        this.actionRows,
       );
-    }
+      if (newMessageId) {
+        await prisma.issueLink.update({
+          where: { id: link.id },
+          data: { embedMessageId: newMessageId },
+        });
+        logger.info(
+          { threadId: thread.id, issue: event.number },
+          'Reposted Discord embed at the bottom of the thread',
+        );
+      }
+    });
   }
 
   public async refreshIssue(owner: string, repo: string, issueNumber: number): Promise<void> {
     const event = await this.issues.getIssueEvent(owner, repo, issueNumber);
     await this.onIssueChanged(event);
+  }
+
+  private async withThreadLock<T>(key: string, task: () => Promise<T>): Promise<T> {
+    const previous = this.threadLocks.get(key) ?? Promise.resolve();
+    const run = previous.then(task, task);
+    this.threadLocks.set(
+      key,
+      run.then(
+        () => undefined,
+        () => undefined,
+      ),
+    );
+    return run;
   }
 
   private buildEmbed(input: {

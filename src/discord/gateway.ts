@@ -34,20 +34,25 @@ export class DiscordGateway {
     }
   }
 
-  public async editEmbed(
+  public async repostEmbed(
     thread: AnyThreadChannel,
-    messageId: string,
+    oldMessageId: string | null,
     embed: EmbedBuilder,
     components: ActionRows,
-  ): Promise<boolean> {
+  ): Promise<string | null> {
+    let newMessageId: string;
     try {
-      const message = await thread.messages.fetch(messageId);
-      await message.edit({ embeds: [embed], components });
-      return true;
+      const message = await thread.send({ embeds: [embed], components });
+      newMessageId = message.id;
     } catch (error) {
-      logger.error({ error, threadId: thread.id, messageId }, 'Failed to edit embed');
-      return false;
+      logger.error({ error, threadId: thread.id }, 'Failed to repost embed');
+      return null;
     }
+
+    if (oldMessageId) {
+      await thread.messages.delete(oldMessageId).catch(() => undefined);
+    }
+    return newMessageId;
   }
 
   public async updateEmbedVotes(threadId: string, messageId: string, votes: number): Promise<void> {

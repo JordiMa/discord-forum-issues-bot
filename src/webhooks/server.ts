@@ -20,6 +20,9 @@ export function createWebhookServer(
   const server = express();
 
   app.webhooks.on('issues', async ({ payload }) => {
+    if (payload.action === 'opened') {
+      return;
+    }
     try {
       await sync.onIssueChanged(
         normalizeIssue(payload.repository.owner.login, payload.repository.name, payload.issue),

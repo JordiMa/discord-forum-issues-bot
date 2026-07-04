@@ -27,7 +27,7 @@ async function bootstrap(): Promise<void> {
   const github = new GitHubModule();
   const issues = new IssuesService(github);
   const sync = new SyncService(appConfig, issues, gateway);
-  const actions = new IssueActionHandler(appConfig, issues, sync);
+  const actions = new IssueActionHandler(appConfig, issues);
   const comments = new CommentMirrorService(appConfig, issues, gateway);
   const linkedRefs = new LinkedRefsService(appConfig, issues, sync);
   const votes = new VoteService(gateway);
