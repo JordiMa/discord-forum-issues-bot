@@ -1,7 +1,10 @@
 import {
   ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
   StringSelectMenuBuilder,
   StringSelectMenuOptionBuilder,
+  type MessageActionRowComponentBuilder,
 } from 'discord.js';
 import type { AppConfig } from '../../config/app-config.js';
 import { labelToStatusName } from '../../sync/status.js';
@@ -14,7 +17,10 @@ export const ISSUE_ACTION = {
   version: 'issue-action:version',
 } as const;
 
+export const VOTE_CUSTOM_ID = 'issue-vote';
 export const NONE_VALUE = '__none__';
+
+type IssueActionRow = ActionRowBuilder<MessageActionRowComponentBuilder>;
 
 interface SelectOption {
   label: string;
@@ -29,10 +35,8 @@ const PRIORITIES: SelectOption[] = [
   { label: 'Low', value: 'priority:low', emoji: '🟢' },
 ];
 
-export function buildIssueActionRows(
-  config: AppConfig,
-): ActionRowBuilder<StringSelectMenuBuilder>[] {
-  const rows: ActionRowBuilder<StringSelectMenuBuilder>[] = [];
+export function buildIssueActionRows(config: AppConfig): IssueActionRow[] {
+  const rows: IssueActionRow[] = [buildVoteRow()];
 
   const statusOptions: SelectOption[] = Object.values(config.workflow.statuses).map((status) => ({
     label: labelToStatusName(status.label),
@@ -69,11 +73,16 @@ export function buildIssueActionRows(
   return rows;
 }
 
-function buildSelectRow(
-  customId: string,
-  placeholder: string,
-  options: SelectOption[],
-): ActionRowBuilder<StringSelectMenuBuilder> {
+function buildVoteRow(): IssueActionRow {
+  const button = new ButtonBuilder()
+    .setCustomId(VOTE_CUSTOM_ID)
+    .setLabel('Me too')
+    .setEmoji('👍')
+    .setStyle(ButtonStyle.Secondary);
+  return new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(button);
+}
+
+function buildSelectRow(customId: string, placeholder: string, options: SelectOption[]): IssueActionRow {
   const menu = new StringSelectMenuBuilder().setCustomId(customId).setPlaceholder(placeholder);
   menu.addOptions(
     options.map((option) => {
@@ -86,5 +95,5 @@ function buildSelectRow(
       return builder;
     }),
   );
-  return new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(menu);
+  return new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(menu);
 }

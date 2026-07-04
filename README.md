@@ -11,7 +11,8 @@ with **GitHub Issues as the single source of truth**.
 > persistent status embed, and GitHub → Discord embed updates), and moderators can
 > drive status / priority / assignee / version from select menus on the embed.
 > Comments mirror both ways, and linked PRs and releases surface on the embed
-> (with auto status on merge). Voting and duplicate detection are still to come.
+> (with auto status on merge). Members vote with a 👍 button. Duplicate detection
+> and Projects sync are still to come.
 
 ## Architecture
 
@@ -79,6 +80,13 @@ and if `workflow.mergedStatus` is set the issue's status label is swapped to it
 automatically. When a release's notes reference the issue or its fixing PR, the
 embed shows **Released in vX**. (Auto-locking the thread some days after a
 release is not implemented yet.)
+
+## Voting
+
+Every embed carries a **👍 Me too** button, open to all members. Clicking it
+toggles the member's vote (one per user, tracked in a `Vote` table) and updates
+the **Votes** field in place — no reactions to tally. The `/topbugs [limit]`
+slash command lists the most-voted issues, each linking back to its thread.
 
 ## Tech stack
 
@@ -160,7 +168,8 @@ the **Message Content** intent (to read the starter message).
 - [x] Moderator select-menu actions (status, priority, assignee, version)
 - [x] Comment mirroring (Discord replies ↔ GitHub comments)
 - [x] Linked PRs (`Fixes #N` → PR field + auto status on merge) & release tags
-- [ ] Voting · duplicate detection · GitHub Projects column sync
+- [x] Voting (`👍 Me too` button, one per user, `/topbugs` leaderboard)
+- [ ] Duplicate detection · GitHub Projects column sync
 - [ ] Auto-lock threads N days after release
 
 ## License

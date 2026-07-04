@@ -2,12 +2,12 @@ import {
   type ActionRowBuilder,
   type AnyThreadChannel,
   type Client,
-  type EmbedBuilder,
-  type StringSelectMenuBuilder,
+  EmbedBuilder,
+  type MessageActionRowComponentBuilder,
 } from 'discord.js';
 import { logger } from '../logger.js';
 
-type ActionRows = ActionRowBuilder<StringSelectMenuBuilder>[];
+type ActionRows = ActionRowBuilder<MessageActionRowComponentBuilder>[];
 
 export class DiscordGateway {
   public constructor(private readonly client: Client) {}
@@ -47,6 +47,30 @@ export class DiscordGateway {
     } catch (error) {
       logger.error({ error, threadId: thread.id, messageId }, 'Failed to edit embed');
       return false;
+    }
+  }
+
+  public async updateEmbedVotes(threadId: string, messageId: string, votes: number): Promise<void> {
+    const thread = await this.fetchThread(threadId);
+    if (!thread) {
+      return;
+    }
+    const message = await thread.messages.fetch(messageId).catch(() => null);
+    const existing = message?.embeds[0];
+    if (!message || !existing) {
+      return;
+    }
+
+    const embed = EmbedBuilder.from(existing);
+    const fields = (embed.data.fields ?? []).map((field) =>
+      field.name === 'Votes' ? { ...field, value: String(votes) } : field,
+    );
+    embed.setFields(fields);
+
+    try {
+      await message.edit({ embeds: [embed] });
+    } catch (error) {
+      logger.error({ error, threadId, messageId }, 'Failed to update vote count');
     }
   }
 

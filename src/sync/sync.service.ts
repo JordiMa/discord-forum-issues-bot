@@ -2,7 +2,7 @@ import type {
   ActionRowBuilder,
   AnyThreadChannel,
   Message,
-  StringSelectMenuBuilder,
+  MessageActionRowComponentBuilder,
 } from 'discord.js';
 import type { AppConfig, ForumConfig } from '../config/app-config.js';
 import type { IssuesService } from '../github/issues.service.js';
@@ -32,7 +32,7 @@ interface LinkedRefs {
 }
 
 export class SyncService {
-  private readonly actionRows: ActionRowBuilder<StringSelectMenuBuilder>[];
+  private readonly actionRows: ActionRowBuilder<MessageActionRowComponentBuilder>[];
 
   public constructor(
     private readonly config: AppConfig,

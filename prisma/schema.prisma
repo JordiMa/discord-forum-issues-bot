@@ -59,6 +59,17 @@ model IssueLink {
 
   repository   Repository @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
   repositoryId String
+  voters       Vote[]
 
   @@unique([repositoryId, issueNumber])
+}
+
+model Vote {
+  id          String    @id @default(cuid())
+  userId      String
+  createdAt   DateTime  @default(now())
+  issueLink   IssueLink @relation(fields: [issueLinkId], references: [id], onDelete: Cascade)
+  issueLinkId String
+
+  @@unique([issueLinkId, userId])
 }
