@@ -55,6 +55,26 @@ export class DiscordGateway {
     return newMessageId;
   }
 
+  public async updateComponents(
+    threadId: string,
+    messageId: string,
+    components: ActionRows,
+  ): Promise<void> {
+    const thread = await this.fetchThread(threadId);
+    if (!thread) {
+      return;
+    }
+    const message = await thread.messages.fetch(messageId).catch(() => null);
+    if (!message) {
+      return;
+    }
+    try {
+      await message.edit({ components });
+    } catch (error) {
+      logger.error({ error, threadId, messageId }, 'Failed to update the vote button');
+    }
+  }
+
   public async sendThreadMessage(threadId: string, content: string): Promise<void> {
     const thread = await this.fetchThread(threadId);
     if (!thread) {

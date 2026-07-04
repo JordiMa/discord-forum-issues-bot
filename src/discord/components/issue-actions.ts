@@ -39,10 +39,10 @@ const PRIORITIES: SelectOption[] = [
 
 // Components on the public embed: a vote button (everyone) and a Manage button
 // (opens a moderator-only ephemeral panel). Everyone sees only these two.
-export function buildIssueActionRows(): IssueActionRow[] {
+export function buildIssueActionRows(voteCount: number): IssueActionRow[] {
   const vote = new ButtonBuilder()
     .setCustomId(VOTE_CUSTOM_ID)
-    .setLabel('Moi aussi')
+    .setLabel(voteCount > 0 ? `Moi aussi · ${voteCount}` : 'Moi aussi')
     .setEmoji('👍')
     .setStyle(ButtonStyle.Secondary);
   const manage = new ButtonBuilder()

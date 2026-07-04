@@ -7,7 +7,7 @@ import {
 } from 'discord.js';
 import type { DiscordGateway } from '../gateway.js';
 import { toggleVote } from '../../db/vote.js';
-import { VOTE_CUSTOM_ID } from '../components/issue-actions.js';
+import { VOTE_CUSTOM_ID, buildIssueActionRows } from '../components/issue-actions.js';
 import { prisma } from '../../db/client.js';
 import type { InteractionHandler } from './interaction-handler.js';
 
@@ -47,9 +47,16 @@ export class VoteService implements InteractionHandler {
     }
 
     const result = await toggleVote(link.id, interaction.user.id);
+    if (link.embedMessageId) {
+      await this.gateway.updateComponents(
+        link.threadId,
+        link.embedMessageId,
+        buildIssueActionRows(result.count),
+      );
+    }
 
     await interaction.editReply({
-      content: result.added ? "👍 C'est noté, merci !" : 'Vote retiré.',
+      content: result.added ? "👍 C'est noté, merci pour ton retour !" : 'Vote retiré.',
     });
   }
 

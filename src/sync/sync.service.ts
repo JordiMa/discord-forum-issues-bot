@@ -1,9 +1,4 @@
-import type {
-  ActionRowBuilder,
-  AnyThreadChannel,
-  Message,
-  MessageActionRowComponentBuilder,
-} from 'discord.js';
+import type { AnyThreadChannel, Message } from 'discord.js';
 import type { AppConfig, ForumConfig } from '../config/app-config.js';
 import type { IssuesService } from '../github/issues.service.js';
 import type { IssueChangedEvent } from '../github/issue-event.js';
@@ -54,16 +49,13 @@ interface LinkedRefs {
 }
 
 export class SyncService {
-  private readonly actionRows: ActionRowBuilder<MessageActionRowComponentBuilder>[];
   private readonly threadLocks = new Map<string, Promise<unknown>>();
 
   public constructor(
     private readonly config: AppConfig,
     private readonly issues: IssuesService,
     private readonly gateway: DiscordGateway,
-  ) {
-    this.actionRows = buildIssueActionRows();
-  }
+  ) {}
 
   public async onThreadCreated(thread: AnyThreadChannel): Promise<void> {
     const result = await this.ensureIssueForThread(thread);
@@ -138,7 +130,7 @@ export class SyncService {
         votes: 0,
         createdAt: new Date(),
       }),
-      this.actionRows,
+      buildIssueActionRows(0),
     );
 
     await prisma.issueLink.create({
@@ -199,7 +191,7 @@ export class SyncService {
         thread,
         current.embedMessageId,
         embed,
-        this.actionRows,
+        buildIssueActionRows(current.votes),
       );
       if (newMessageId) {
         await prisma.issueLink.update({
