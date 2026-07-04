@@ -20,6 +20,7 @@ const statusConfigSchema = z.object({
   label: z.string(),
   emoji: z.string().optional(),
   name: z.string().optional(),
+  color: z.string().optional(),
   projectColumn: z.string().optional(),
 });
 

@@ -22,7 +22,6 @@ import {
   DEFAULT_STATUS_COLOR,
   resolvePriorityFromLabels,
   resolveStatusFromLabels,
-  statusColor,
 } from './status.js';
 import { findIssueLink } from '../db/issue-link.js';
 import { config as env } from '../config/index.js';
@@ -314,7 +313,7 @@ export class SyncService {
       };
     }
     if (fromLabels) {
-      return { emoji: fromLabels.emoji, name: fromLabels.name, color: statusColor(fromLabels.label) };
+      return { emoji: fromLabels.emoji, name: fromLabels.name, color: fromLabels.color };
     }
     return { emoji: '⚪', name: 'Ouvert', color: DEFAULT_STATUS_COLOR };
   }

@@ -5,6 +5,7 @@ export interface ResolvedStatus {
   label: string;
   emoji: string;
   name: string;
+  color: number;
 }
 
 const PRIORITY_PREFIX = 'priority:';
@@ -13,7 +14,7 @@ export const DEFAULT_STATUS_COLOR = 0x5865f2;
 export const CLOSED_STATUS_COLOR = 0x6e7681;
 
 const STATUS_COLORS: Record<string, number> = {
-  'status:triage': 0xf1c40f,
+  'status:new': 0xf1c40f,
   'status:confirmed': 0x3498db,
   'status:planned': 0x9b59b6,
   'status:in-progress': 0xe67e22,
@@ -42,14 +43,19 @@ export function resolveStatusFromLabels(
         label: status.label,
         emoji: status.emoji ?? '⚪',
         name: status.name ?? labelToStatusName(status.label),
+        color: parseHexColor(status.color) ?? STATUS_COLORS[status.label] ?? DEFAULT_STATUS_COLOR,
       };
     }
   }
   return null;
 }
 
-export function statusColor(label: string | null): number {
-  return (label ? STATUS_COLORS[label] : undefined) ?? DEFAULT_STATUS_COLOR;
+function parseHexColor(value: string | undefined): number | undefined {
+  if (!value) {
+    return undefined;
+  }
+  const parsed = Number.parseInt(value.replace(/^#/, ''), 16);
+  return Number.isNaN(parsed) ? undefined : parsed;
 }
 
 export function resolvePriorityFromLabels(labels: string[]): string | undefined {
