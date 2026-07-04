@@ -7,6 +7,7 @@ import { DiscordGateway } from './discord/gateway.js';
 import { DiscordModule } from './discord/index.js';
 import { IssueActionHandler } from './discord/interactions/issue-action-handler.js';
 import { VoteService } from './discord/interactions/vote.service.js';
+import { IssueCommandService } from './discord/interactions/issue-command.service.js';
 import { CommentMirrorService } from './comments/comment-mirror.service.js';
 import { GitHubModule } from './github/index.js';
 import { IssuesService } from './github/issues.service.js';
@@ -30,7 +31,8 @@ async function bootstrap(): Promise<void> {
   const comments = new CommentMirrorService(appConfig, issues, gateway);
   const linkedRefs = new LinkedRefsService(appConfig, issues, sync);
   const votes = new VoteService(gateway);
-  const discord = new DiscordModule(client, sync, actions, comments, votes);
+  const issueCommand = new IssueCommandService(appConfig, sync, gateway);
+  const discord = new DiscordModule(client, sync, comments, [actions, votes, issueCommand]);
 
   const server = createWebhookServer(github.getApp(), sync, comments, linkedRefs);
   server.listen(config.server.port, () => {

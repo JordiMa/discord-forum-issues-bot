@@ -45,6 +45,10 @@ label at a time; changing it in Discord updates GitHub and vice-versa.
 5. A persistent **status embed** is posted in the thread and the
    thread ⇄ issue link is stored (`IssueLink`) for future edits.
 
+If a thread predates the bot (or its forum was mapped later), a moderator can run
+**`/create-issue`** inside the thread to create the issue on demand. It is
+idempotent — a thread already linked to an issue is left untouched.
+
 ## Moderator actions (no slash commands)
 
 The embed carries **select menus** — Status, Priority, and (when configured)
@@ -161,7 +165,7 @@ the **Message Content** intent (to read the starter message).
 
 ## Roadmap
 
-- [x] Thread → GitHub issue creation
+- [x] Thread → GitHub issue creation (+ manual `/create-issue` fallback)
 - [x] Persistent status embed in the thread
 - [x] Default labels + Discord tag → label mapping
 - [x] GitHub → Discord embed sync (issue labels / assignees / milestone / state)

@@ -9,16 +9,16 @@ import { config } from '../config/index.js';
 import { logger } from '../logger.js';
 import type { SyncService } from '../sync/sync.service.js';
 import type { CommentMirrorService } from '../comments/comment-mirror.service.js';
-import type { IssueActionHandler } from './interactions/issue-action-handler.js';
-import { TOP_BUGS_COMMAND, type VoteService } from './interactions/vote.service.js';
+import type { InteractionHandler } from './interactions/interaction-handler.js';
+import { TOP_BUGS_COMMAND } from './interactions/vote.service.js';
+import { CREATE_ISSUE_COMMAND } from './interactions/issue-command.service.js';
 
 export class DiscordModule {
   public constructor(
     private readonly client: Client,
     private readonly sync: SyncService,
-    private readonly actions: IssueActionHandler,
     private readonly comments: CommentMirrorService,
-    private readonly votes: VoteService,
+    private readonly interactionHandlers: InteractionHandler[],
   ) {}
 
   public async start(): Promise<Client> {
@@ -55,7 +55,7 @@ export class DiscordModule {
 
   private async registerCommands(readyClient: Client<true>): Promise<void> {
     try {
-      const commands = [TOP_BUGS_COMMAND.toJSON()];
+      const commands = [TOP_BUGS_COMMAND.toJSON(), CREATE_ISSUE_COMMAND.toJSON()];
       if (config.discord.guildId) {
         await readyClient.application.commands.set(commands, config.discord.guildId);
       } else {
@@ -75,11 +75,12 @@ export class DiscordModule {
   }
 
   private async handleInteraction(interaction: Interaction): Promise<void> {
-    try {
-      await this.actions.handle(interaction);
-      await this.votes.handle(interaction);
-    } catch (error) {
-      logger.error({ error }, 'Failed to handle interaction');
+    for (const handler of this.interactionHandlers) {
+      try {
+        await handler.handle(interaction);
+      } catch (error) {
+        logger.error({ error }, 'Failed to handle interaction');
+      }
     }
   }
 

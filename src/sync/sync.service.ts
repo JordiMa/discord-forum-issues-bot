@@ -26,6 +26,20 @@ const DEFAULT_FORUM_EMOJI = '🐛';
 const FALLBACK_STATUS = { emoji: '⚪', name: 'Open' };
 const CLOSED_STATUS = { emoji: '✅', name: 'Closed' };
 
+export enum IssueCreationOutcome {
+  Created = 'created',
+  AlreadyLinked = 'already-linked',
+  NotAForum = 'not-a-forum',
+  ForumNotMapped = 'forum-not-mapped',
+  RepositoryUnknown = 'repository-unknown',
+}
+
+export interface IssueCreationResult {
+  outcome: IssueCreationOutcome;
+  issueNumber?: number;
+  url?: string;
+}
+
 interface LinkedRefs {
   pullRequest?: { number: number; url: string; merged: boolean };
   release?: string;
@@ -43,25 +57,38 @@ export class SyncService {
   }
 
   public async onThreadCreated(thread: AnyThreadChannel): Promise<void> {
+    const result = await this.ensureIssueForThread(thread);
+    if (result.outcome === IssueCreationOutcome.AlreadyLinked) {
+      logger.warn(
+        { threadId: thread.id, issue: result.issueNumber },
+        'Thread is already linked to an issue, skipping',
+      );
+    } else if (result.outcome === IssueCreationOutcome.RepositoryUnknown) {
+      logger.error({ threadId: thread.id }, 'Forum references an unknown repository');
+    }
+  }
+
+  public async ensureIssueForThread(thread: AnyThreadChannel): Promise<IssueCreationResult> {
     if (!isForumThread(thread)) {
-      return;
+      return { outcome: IssueCreationOutcome.NotAForum };
     }
 
     const forum = this.resolveForum(thread.parentId);
     if (!forum) {
-      return;
+      return { outcome: IssueCreationOutcome.ForumNotMapped };
     }
 
     const alreadyLinked = await prisma.issueLink.findUnique({ where: { threadId: thread.id } });
     if (alreadyLinked) {
-      logger.warn({ threadId: thread.id }, 'Thread is already linked to an issue, skipping');
-      return;
+      return {
+        outcome: IssueCreationOutcome.AlreadyLinked,
+        issueNumber: alreadyLinked.issueNumber,
+      };
     }
 
     const repository = this.config.repositories[forum.repository];
     if (!repository) {
-      logger.error({ repository: forum.repository }, 'Forum references an unknown repository');
-      return;
+      return { outcome: IssueCreationOutcome.RepositoryUnknown };
     }
 
     const starterMessage = await fetchStarterMessageWithRetry(thread);
@@ -123,6 +150,7 @@ export class SyncService {
       },
       'Created GitHub issue for forum thread',
     );
+    return { outcome: IssueCreationOutcome.Created, issueNumber: issue.number, url: issue.url };
   }
 
   public async onIssueChanged(event: IssueChangedEvent): Promise<void> {
@@ -208,7 +236,11 @@ export class SyncService {
     return {
       pullRequest:
         link.linkedPrNumber !== null
-          ? { number: link.linkedPrNumber, url: link.linkedPrUrl ?? '', merged: link.linkedPrMerged }
+          ? {
+              number: link.linkedPrNumber,
+              url: link.linkedPrUrl ?? '',
+              merged: link.linkedPrMerged,
+            }
           : undefined,
       release: link.releaseTag ?? undefined,
     };
