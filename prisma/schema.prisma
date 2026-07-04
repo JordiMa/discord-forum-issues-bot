@@ -1,0 +1,60 @@
+// SQLite by default. To use PostgreSQL, set provider = "postgresql"
+// and point DATABASE_URL at your Postgres instance.
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Guild {
+  id        String   @id @default(cuid())
+  guildId   String   @unique
+  createdAt DateTime @default(now())
+
+  forums Forum[]
+}
+
+model Repository {
+  id             String   @id @default(cuid())
+  owner          String
+  repo           String
+  installationId Int
+  createdAt      DateTime @default(now())
+
+  forums     Forum[]
+  issueLinks IssueLink[]
+
+  @@unique([owner, repo])
+}
+
+model Forum {
+  id             String   @id @default(cuid())
+  forumChannelId String   @unique
+  defaultLabels  String   @default("[]") // JSON-encoded string[]
+  defaultProject String?
+  createdAt      DateTime @default(now())
+
+  guild        Guild      @relation(fields: [guildId], references: [id], onDelete: Cascade)
+  guildId      String
+  repository   Repository @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+  repositoryId String
+}
+
+model IssueLink {
+  id             String   @id @default(cuid())
+  threadId       String   @unique
+  issueId        BigInt
+  issueNumber    Int
+  embedMessageId String?
+  votes          Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  repository   Repository @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+  repositoryId String
+
+  @@unique([repositoryId, issueNumber])
+}

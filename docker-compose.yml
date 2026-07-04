@@ -1,0 +1,28 @@
+services:
+  bot:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - '${PORT:-3000}:3000'
+    volumes:
+      - ./config.yaml:/app/config.yaml:ro
+      - bot-data:/app/prisma
+    environment:
+      DATABASE_URL: 'file:/app/prisma/prod.db'
+
+  # Optional PostgreSQL — switch prisma/schema.prisma provider to "postgresql"
+  # and set DATABASE_URL to postgresql://bot:bot@postgres:5432/bot
+  # postgres:
+  #   image: postgres:16-alpine
+  #   restart: unless-stopped
+  #   environment:
+  #     POSTGRES_USER: bot
+  #     POSTGRES_PASSWORD: bot
+  #     POSTGRES_DB: bot
+  #   volumes:
+  #     - pg-data:/var/lib/postgresql/data
+
+volumes:
+  bot-data:
+  # pg-data:

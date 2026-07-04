@@ -1,0 +1,50 @@
+# Copy to config.yaml and adjust. Maps Discord forums to GitHub repositories
+# and defines the status workflow. GitHub is the source of truth.
+
+repositories:
+  mobile:
+    owner: SentryGuard
+    repo: mobile
+
+forums:
+  bugs:
+    repository: mobile
+    defaultLabels:
+      - bug
+      - status:triage
+    project: Mobile Development
+  suggestions:
+    repository: mobile
+    defaultLabels:
+      - enhancement
+      - status:triage
+
+workflow:
+  statuses:
+    triage:
+      label: status:triage
+      emoji: '🟡'
+    confirmed:
+      label: status:confirmed
+      emoji: '🔵'
+    planned:
+      label: status:planned
+      emoji: '📋'
+    progress:
+      label: status:in-progress
+      emoji: '🔧'
+    review:
+      label: status:review
+      emoji: '👀'
+    testing:
+      label: status:testing
+      emoji: '🧪'
+    done:
+      label: status:done
+      emoji: '✅'
+    wontfix:
+      label: status:wontfix
+      emoji: '❌'
+    duplicate:
+      label: status:duplicate
+      emoji: '🔁'
