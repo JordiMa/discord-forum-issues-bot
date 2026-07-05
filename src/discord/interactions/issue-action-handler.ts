@@ -88,17 +88,26 @@ export class IssueActionHandler implements InteractionHandler {
     await interaction.deferUpdate();
 
     if (Object.keys(selections).length === 0) {
-      await interaction.editReply({ content: 'Rien de sélectionné.', components: [] });
+      await interaction.followUp({
+        content: 'Sélectionne au moins un champ.',
+        flags: MessageFlags.Ephemeral,
+      });
       return;
     }
     const link = await prisma.issueLink.findUnique({ where: { threadId: interaction.channelId } });
     if (!link) {
-      await interaction.editReply({ content: "Ce fil n'est lié à aucune issue.", components: [] });
+      await interaction.followUp({
+        content: "Ce fil n'est lié à aucune issue.",
+        flags: MessageFlags.Ephemeral,
+      });
       return;
     }
     const repository = await prisma.repository.findUnique({ where: { id: link.repositoryId } });
     if (!repository) {
-      await interaction.editReply({ content: 'Dépôt introuvable dans la configuration.', components: [] });
+      await interaction.followUp({
+        content: 'Dépôt introuvable dans la configuration.',
+        flags: MessageFlags.Ephemeral,
+      });
       return;
     }
 
@@ -109,10 +118,14 @@ export class IssueActionHandler implements InteractionHandler {
         link.issueNumber,
         selections,
       );
-      await interaction.editReply({ content: summary, components: [] });
+      await interaction.deleteReply();
+      await interaction.followUp({ content: summary, flags: MessageFlags.Ephemeral });
     } catch (error) {
       logger.error({ error, issue: link.issueNumber }, 'Failed to apply moderator changes');
-      await interaction.editReply({ content: "⚠️ Échec de l'application sur GitHub.", components: [] });
+      await interaction.followUp({
+        content: "⚠️ Échec de l'application sur GitHub.",
+        flags: MessageFlags.Ephemeral,
+      });
     }
   }
 
