@@ -1,7 +1,9 @@
 import {
+  ComponentType,
   MessageFlags,
   type ButtonInteraction,
   type Interaction,
+  type Message,
   type StringSelectMenuInteraction,
 } from 'discord.js';
 import type { AppConfig } from '../../config/app-config.js';
@@ -13,8 +15,10 @@ import { isModerator } from '../permissions.js';
 import {
   buildManagePanelRows,
   ISSUE_ACTION,
+  MANAGE_APPLY_CUSTOM_ID,
   MANAGE_CUSTOM_ID,
   NONE_VALUE,
+  issueActionKey,
 } from '../components/issue-actions.js';
 import type { InteractionHandler } from './interaction-handler.js';
 
@@ -29,18 +33,22 @@ export class IssueActionHandler implements InteractionHandler {
 
   public async handle(interaction: Interaction): Promise<void> {
     if (interaction.isButton() && interaction.customId === MANAGE_CUSTOM_ID) {
-      await this.handleManage(interaction);
+      await this.openPanel(interaction);
+      return;
+    }
+    if (interaction.isButton() && interaction.customId === MANAGE_APPLY_CUSTOM_ID) {
+      await this.apply(interaction);
       return;
     }
     if (
       interaction.isStringSelectMenu() &&
       interaction.customId.startsWith(`${ISSUE_ACTION.prefix}:`)
     ) {
-      await this.handleSelect(interaction);
+      await this.select(interaction);
     }
   }
 
-  private async handleManage(interaction: ButtonInteraction): Promise<void> {
+  private async openPanel(interaction: ButtonInteraction): Promise<void> {
     if (!interaction.inCachedGuild()) {
       await interaction.reply({ content: UNAVAILABLE, flags: MessageFlags.Ephemeral });
       return;
@@ -50,108 +58,138 @@ export class IssueActionHandler implements InteractionHandler {
       return;
     }
     await interaction.reply({
-      content: '⚙️ Actions de modération pour cette demande :',
+      content: '⚙️ Sélectionne les champs à changer, puis clique sur **Valider**.',
       components: buildManagePanelRows(this.config),
       flags: MessageFlags.Ephemeral,
     });
   }
 
-  private async handleSelect(interaction: StringSelectMenuInteraction): Promise<void> {
-    if (!interaction.inCachedGuild()) {
-      await interaction.reply({ content: UNAVAILABLE, flags: MessageFlags.Ephemeral });
-      return;
-    }
-    if (!isModerator(interaction.member, this.config.moderation)) {
+  private async select(interaction: StringSelectMenuInteraction): Promise<void> {
+    if (!interaction.inCachedGuild() || !isModerator(interaction.member, this.config.moderation)) {
       await interaction.reply({ content: DENIED, flags: MessageFlags.Ephemeral });
       return;
     }
-
     const value = interaction.values[0];
     if (!value) {
       await interaction.deferUpdate();
       return;
     }
+    const selections = this.readSelections(interaction.message);
+    selections[issueActionKey(interaction.customId)] = value;
+    await interaction.update({ components: buildManagePanelRows(this.config, selections) });
+  }
 
-    const link = await prisma.issueLink.findUnique({
-      where: { threadId: interaction.channelId },
-    });
+  private async apply(interaction: ButtonInteraction): Promise<void> {
+    if (!interaction.inCachedGuild() || !isModerator(interaction.member, this.config.moderation)) {
+      await interaction.reply({ content: DENIED, flags: MessageFlags.Ephemeral });
+      return;
+    }
+    const selections = this.readSelections(interaction.message);
+    await interaction.deferUpdate();
+
+    if (Object.keys(selections).length === 0) {
+      await interaction.editReply({ content: 'Rien de sélectionné.', components: [] });
+      return;
+    }
+    const link = await prisma.issueLink.findUnique({ where: { threadId: interaction.channelId } });
     if (!link) {
-      await interaction.reply({
-        content: "Ce fil n'est lié à aucune demande GitHub.",
-        flags: MessageFlags.Ephemeral,
-      });
+      await interaction.editReply({ content: "Ce fil n'est lié à aucune issue.", components: [] });
       return;
     }
     const repository = await prisma.repository.findUnique({ where: { id: link.repositoryId } });
     if (!repository) {
-      await interaction.reply({
-        content: 'Dépôt introuvable dans la configuration.',
-        flags: MessageFlags.Ephemeral,
-      });
+      await interaction.editReply({ content: 'Dépôt introuvable dans la configuration.', components: [] });
       return;
     }
 
-    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-
-    const action = interaction.customId.slice(`${ISSUE_ACTION.prefix}:`.length);
     try {
-      const summary = await this.applyAction(
-        action,
-        value,
+      const summary = await this.applyBatch(
         repository.owner,
         repository.repo,
         link.issueNumber,
+        selections,
       );
-      await interaction.editReply({ content: summary });
+      await interaction.editReply({ content: summary, components: [] });
     } catch (error) {
-      logger.error({ error, action, issue: link.issueNumber }, 'Failed to apply moderator action');
-      await interaction.editReply({ content: "⚠️ Impossible d'appliquer le changement sur GitHub." });
+      logger.error({ error, issue: link.issueNumber }, 'Failed to apply moderator changes');
+      await interaction.editReply({ content: "⚠️ Échec de l'application sur GitHub.", components: [] });
     }
   }
 
-  private async applyAction(
-    action: string,
-    value: string,
+  private async applyBatch(
     owner: string,
     repo: string,
     issueNumber: number,
+    selections: Record<string, string>,
   ): Promise<string> {
     const before = await this.issues.getIssueEvent(owner, repo, issueNumber);
+    let labels = before.labels;
+    let labelsChanged = false;
+    const applied: string[] = [];
 
-    switch (action) {
-      case 'type': {
-        const labels =
-          value === NONE_VALUE
-            ? before.labels.filter((label) => !label.startsWith('type:'))
-            : swapPrefixedLabel(before.labels, 'type:', value);
-        await this.issues.setLabels(owner, repo, issueNumber, labels);
-        return value === NONE_VALUE ? '✅ Type retiré' : `✅ Type → \`${value}\``;
-      }
-      case 'status': {
-        const labels = swapPrefixedLabel(before.labels, 'status:', value);
-        await this.issues.setLabels(owner, repo, issueNumber, labels);
-        return `✅ Statut → \`${value}\``;
-      }
-      case 'priority': {
-        const labels = swapPrefixedLabel(before.labels, 'priority:', value);
-        await this.issues.setLabels(owner, repo, issueNumber, labels);
-        return `✅ Priorité → \`${value}\``;
-      }
-      case 'assignee': {
-        const assignees = value === NONE_VALUE ? [] : [value];
-        await this.issues.setAssignees(owner, repo, issueNumber, assignees);
-        return value === NONE_VALUE ? '✅ Assignation retirée' : `✅ Assigné à \`${value}\``;
-      }
-      case 'version': {
-        const milestone = value === NONE_VALUE ? null : value;
-        const applied = await this.issues.setMilestone(owner, repo, issueNumber, milestone);
-        if (!applied) {
-          return `⚠️ Le jalon « ${value} » n'existe pas sur GitHub. Crée-le d'abord.`;
-        }
-        return milestone ? `✅ Version → \`${milestone}\`` : '✅ Version retirée';
-      }
-      default:
-        return 'Action inconnue.';
+    if (selections.type) {
+      labels =
+        selections.type === NONE_VALUE
+          ? labels.filter((label) => !label.startsWith('type:'))
+          : swapPrefixedLabel(labels, 'type:', selections.type);
+      labelsChanged = true;
+      applied.push('type');
     }
+    if (selections.status) {
+      labels = swapPrefixedLabel(labels, 'status:', selections.status);
+      labelsChanged = true;
+      applied.push('statut');
+    }
+    if (selections.priority) {
+      labels = swapPrefixedLabel(labels, 'priority:', selections.priority);
+      labelsChanged = true;
+      applied.push('priorité');
+    }
+
+    const fields: { labels?: string[]; assignees?: string[] } = {};
+    if (labelsChanged) {
+      fields.labels = labels;
+    }
+    if (selections.assignee) {
+      fields.assignees = selections.assignee === NONE_VALUE ? [] : [selections.assignee];
+      applied.push('assigné');
+    }
+    if (fields.labels || fields.assignees) {
+      await this.issues.updateIssue(owner, repo, issueNumber, fields);
+    }
+
+    if (selections.version) {
+      const applied2 = await this.issues.setMilestone(
+        owner,
+        repo,
+        issueNumber,
+        selections.version === NONE_VALUE ? null : selections.version,
+      );
+      if (!applied2) {
+        return `⚠️ Champs appliqués, mais le jalon « ${selections.version} » est introuvable sur GitHub.`;
+      }
+      applied.push('version');
+    }
+
+    return applied.length > 0 ? `✅ Mis à jour : ${applied.join(', ')}.` : 'Rien à appliquer.';
+  }
+
+  private readSelections(message: Message): Record<string, string> {
+    const selections: Record<string, string> = {};
+    for (const row of message.components) {
+      if (row.type !== ComponentType.ActionRow) {
+        continue;
+      }
+      for (const component of row.components) {
+        if (component.type !== ComponentType.StringSelect) {
+          continue;
+        }
+        const chosen = component.options.find((option) => option.default)?.value;
+        if (chosen) {
+          selections[issueActionKey(component.customId)] = chosen;
+        }
+      }
+    }
+    return selections;
   }
 }

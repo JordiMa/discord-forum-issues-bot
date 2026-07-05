@@ -101,6 +101,22 @@ export class IssuesService {
     });
   }
 
+  public async updateIssue(
+    owner: string,
+    repo: string,
+    issueNumber: number,
+    fields: { labels?: string[]; assignees?: string[] },
+  ): Promise<void> {
+    const { client } = await this.github.getRepoContext(owner, repo);
+    await client.request('PATCH /repos/{owner}/{repo}/issues/{issue_number}', {
+      owner,
+      repo,
+      issue_number: issueNumber,
+      labels: fields.labels,
+      assignees: fields.assignees,
+    });
+  }
+
   public async setMilestone(
     owner: string,
     repo: string,

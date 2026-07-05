@@ -20,6 +20,7 @@ export const ISSUE_ACTION = {
 
 export const VOTE_CUSTOM_ID = 'issue-vote';
 export const MANAGE_CUSTOM_ID = 'issue-manage';
+export const MANAGE_APPLY_CUSTOM_ID = 'issue-manage-apply';
 export const NONE_VALUE = '__none__';
 
 type IssueActionRow = ActionRowBuilder<MessageActionRowComponentBuilder>;
@@ -30,6 +31,12 @@ interface SelectOption {
   emoji?: string;
 }
 
+interface SelectSpec {
+  customId: string;
+  placeholder: string;
+  options: SelectOption[];
+}
+
 const PRIORITIES: SelectOption[] = [
   { label: 'Critique', value: 'priority:critical', emoji: '🔴' },
   { label: 'Élevée', value: 'priority:high', emoji: '🟠' },
@@ -38,7 +45,7 @@ const PRIORITIES: SelectOption[] = [
 ];
 
 // Components on the public embed: a vote button (everyone) and a Manage button
-// (opens a moderator-only ephemeral panel). Everyone sees only these two.
+// (opens a moderator-only ephemeral panel).
 export function buildIssueActionRows(voteCount: number): IssueActionRow[] {
   const vote = new ButtonBuilder()
     .setCustomId(VOTE_CUSTOM_ID)
@@ -53,67 +60,93 @@ export function buildIssueActionRows(voteCount: number): IssueActionRow[] {
   return [new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(vote, manage)];
 }
 
-// The moderator control panel, shown ephemerally behind the Manage button.
-export function buildManagePanelRows(config: AppConfig): IssueActionRow[] {
-  const rows: IssueActionRow[] = [];
+export function issueActionKey(customId: string): string {
+  return customId.slice(`${ISSUE_ACTION.prefix}:`.length);
+}
+
+// The moderator panel (ephemeral): the selects act as a form — the chosen
+// values are kept as defaults and only applied when "Valider" is clicked.
+// Up to 4 selects fit alongside the Valider button (Discord caps at 5 rows).
+export function buildManagePanelRows(
+  config: AppConfig,
+  selections: Record<string, string> = {},
+): IssueActionRow[] {
+  const specs: SelectSpec[] = [];
 
   const types = Object.values(config.types);
   if (types.length > 0) {
-    const options: SelectOption[] = [
-      { label: 'Aucun', value: NONE_VALUE, emoji: '🚫' },
-      ...types.map((type) => ({
-        label: type.name ?? type.label,
-        value: type.label,
-        emoji: type.emoji,
-      })),
-    ];
-    rows.push(buildSelectRow(ISSUE_ACTION.type, 'Définir le type', options));
+    specs.push({
+      customId: ISSUE_ACTION.type,
+      placeholder: 'Type',
+      options: [
+        { label: 'Aucun', value: NONE_VALUE, emoji: '🚫' },
+        ...types.map((type) => ({ label: type.name ?? type.label, value: type.label, emoji: type.emoji })),
+      ],
+    });
   }
 
-  const statusOptions: SelectOption[] = Object.values(config.workflow.statuses).map((status) => ({
-    label: labelToStatusName(status.label),
-    value: status.label,
-    emoji: status.emoji,
-  }));
-  rows.push(buildSelectRow(ISSUE_ACTION.status, 'Changer le statut', statusOptions));
-  rows.push(buildSelectRow(ISSUE_ACTION.priority, 'Définir la priorité', PRIORITIES));
+  specs.push({
+    customId: ISSUE_ACTION.status,
+    placeholder: 'Statut',
+    options: Object.values(config.workflow.statuses).map((status) => ({
+      label: status.name ?? labelToStatusName(status.label),
+      value: status.label,
+      emoji: status.emoji,
+    })),
+  });
+  specs.push({ customId: ISSUE_ACTION.priority, placeholder: 'Priorité', options: PRIORITIES });
 
   if (config.moderation.assignees.length > 0) {
-    const options: SelectOption[] = [
-      { label: "Retirer l'assignation", value: NONE_VALUE, emoji: '🚫' },
-      ...config.moderation.assignees.map((assignee) => ({
-        label: assignee.name,
-        value: assignee.login,
-        emoji: '👤',
-      })),
-    ];
-    rows.push(buildSelectRow(ISSUE_ACTION.assignee, 'Assigner', options));
+    specs.push({
+      customId: ISSUE_ACTION.assignee,
+      placeholder: 'Assigné à',
+      options: [
+        { label: "Retirer l'assignation", value: NONE_VALUE, emoji: '🚫' },
+        ...config.moderation.assignees.map((assignee) => ({
+          label: assignee.name,
+          value: assignee.login,
+          emoji: '👤',
+        })),
+      ],
+    });
+  }
+  if (config.moderation.versions.length > 0) {
+    specs.push({
+      customId: ISSUE_ACTION.version,
+      placeholder: 'Version',
+      options: [
+        { label: 'Aucune version', value: NONE_VALUE, emoji: '🚫' },
+        ...config.moderation.versions.map((version) => ({ label: version, value: version, emoji: '🔖' })),
+      ],
+    });
   }
 
-  if (config.moderation.versions.length > 0) {
-    const options: SelectOption[] = [
-      { label: 'Aucune version', value: NONE_VALUE, emoji: '🚫' },
-      ...config.moderation.versions.map((version) => ({
-        label: version,
-        value: version,
-        emoji: '🔖',
-      })),
-    ];
-    rows.push(buildSelectRow(ISSUE_ACTION.version, 'Choisir la version', options));
-  }
+  const rows: IssueActionRow[] = specs
+    .slice(0, 4)
+    .map((spec) => buildSelectRow(spec, selections[issueActionKey(spec.customId)]));
+
+  const apply = new ButtonBuilder()
+    .setCustomId(MANAGE_APPLY_CUSTOM_ID)
+    .setLabel('Valider')
+    .setEmoji('✅')
+    .setStyle(ButtonStyle.Success);
+  rows.push(new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(apply));
 
   return rows;
 }
 
-function buildSelectRow(customId: string, placeholder: string, options: SelectOption[]): IssueActionRow {
-  const menu = new StringSelectMenuBuilder().setCustomId(customId).setPlaceholder(placeholder);
+function buildSelectRow(spec: SelectSpec, selectedValue?: string): IssueActionRow {
+  const menu = new StringSelectMenuBuilder().setCustomId(spec.customId).setPlaceholder(spec.placeholder);
   menu.addOptions(
-    options.map((option) => {
+    spec.options.map((option) => {
       const builder = new StringSelectMenuOptionBuilder()
         .setLabel(option.label)
         .setValue(option.value);
       if (option.emoji) {
         builder.setEmoji(option.emoji);
+      }
+      if (selectedValue !== undefined && option.value === selectedValue) {
+        builder.setDefault(true);
       }
       return builder;
     }),
